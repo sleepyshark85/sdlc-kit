@@ -1,0 +1,89 @@
+name: .NET mutation
+
+# Stryker.NET on each library under dotnet/ that has a stryker-config.json (the app and the test kit included). A pull
+# request mutates only the files it changed; weekly and manual runs mutate everything. Both fail below the package's
+# break threshold, its floor in docs/decisions.md. The surviving mutants go to the job summary, so the developer and
+# the reviewer see them on the checks page. A pull request that doesn't change .NET skips it, as dotnet.yml does.
+on:
+  pull_request:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dotnet-mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  changes:
+    name: dotnet-mutation-changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      dotnet: ${{ steps.diff.outputs.dotnet }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Diff
+        id: diff
+        run: python3 .github/changes.py dotnet >> "$GITHUB_OUTPUT"
+
+  mutation:
+    name: dotnet-mutation
+    needs: changes
+    # Skipped only when the detector says false: if it fails, its output is empty and the jobs run.
+    if: ${{ !cancelled() && needs.changes.outputs.dotnet != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Comparing with the base branch needs its history.
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: dotnet/global.json
+
+      - name: Restore tools
+        working-directory: dotnet
+        run: dotnet tool restore
+
+      - name: Mutate
+        shell: bash
+        working-directory: dotnet
+        run: |
+          status=0
+          for config in $(git ls-files '*/stryker-config.json'); do
+            package=$(dirname "$config")
+            echo "::group::$package"
+            if [ "${{ github.event_name }}" = pull_request ]; then
+              (cd "$package" && dotnet stryker --since:"origin/${{ github.base_ref }}" --skip-version-check) || status=1
+            else
+              (cd "$package" && dotnet stryker --skip-version-check) || status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $status
+
+      - name: Survivors
+        if: always()
+        working-directory: dotnet
+        run: python3 ../.github/stryker_survivors.py . >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation-reports
+          path: dotnet/**/StrykerOutput/*/reports/
+          if-no-files-found: ignore

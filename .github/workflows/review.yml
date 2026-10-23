@@ -1,0 +1,63 @@
+name: Review
+
+# The review gate: a pull request's "review" status passes when the newest verdict naming its newest commit in full
+# ("**Verdict: APPROVE** at <40-character sha>"), posted by a trusted author (.github/review_gate.py), approves; a short sha is not
+# accepted, as a commit matching one can be forged. An approval of an earlier commit carries over only clean merges of
+# the default branch into a pull request based on it (.github/review_gate.py says exactly when). Comments run this workflow as it is on main, and every
+# run takes the gate script from main: it reads the pull request through the API, and its commits as git data only,
+# never running its code.
+on:
+  pull_request:
+    # edited: a change of base can change whether an approval carries over.
+    types: [opened, synchronize, reopened, edited]
+  issue_comment:
+    types: [created, edited, deleted]
+
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
+# Runs for one pull request finish in order, so an older result never overwrites a newer one.
+concurrency:
+  group: review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  verdict:
+    # A fork's pull_request run has a read-only token; its status is set on the next comment instead.
+    if: >-
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+      || github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          # The base branch's history, to compare the pull request's commits with.
+          fetch-depth: 0
+
+      - name: Set the review status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number || github.event.issue.number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          # The logins whose verdicts count (the reviewer agent's identity and the owner's); unset, any collaborator's do.
+          REVIEWERS: ${{ vars.REVIEWERS }}
+        run: |
+          pull=$(gh api "repos/$REPO/pulls/$PR")
+          head=$(jq -r .head.sha <<< "$pull")
+          base=$(jq -r .base.ref <<< "$pull")
+          # The head is fetched as data: its objects only, never checked out.
+          if ! result=$(git fetch --quiet --no-tags origin "$head" "+refs/heads/$base:refs/remotes/origin/$base" &&
+                        gh api --paginate "repos/$REPO/issues/$PR/comments" | jq -s 'add // []' |
+                        python3 plugins/sdlc-kit/template/.github/review_gate.py "$head" "$base" "$DEFAULT_BRANCH"); then
+            result=$'error\tThe review gate failed; see its run'
+          fi
+          IFS=$'\t' read -r state description <<< "$result"
+          gh api "repos/$REPO/statuses/$head" -f state="$state" -f context=review -f description="$description" > /dev/null
+          echo "review: $state ($description)"
+          [[ $state != error ]]

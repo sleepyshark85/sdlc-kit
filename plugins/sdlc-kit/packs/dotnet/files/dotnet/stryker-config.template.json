@@ -1,0 +1,15 @@
+{
+  "stryker-config": {
+    "project": "{{Project}}.csproj",
+    "test-projects": [
+      "../../tests/{{Project}}.Tests/{{Project}}.Tests.csproj"
+    ],
+    "test-runner": "mtp",
+    "reporters": ["html", "json", "progress"],
+    "thresholds": {
+      "high": 90,
+      "low": 80,
+      "break": 80
+    }
+  }
+}

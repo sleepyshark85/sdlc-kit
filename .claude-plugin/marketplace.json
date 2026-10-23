@@ -1,0 +1,11 @@
+{
+  "name": "sdlc-kit",
+  "owner": { "name": "sleepyshark85" },
+  "plugins": [
+    {
+      "name": "sdlc-kit",
+      "source": "./plugins/sdlc-kit",
+      "description": "An SDLC for building software with AI agents: developer, fixer and reviewer agents, dispatch and planning skills, git and context hooks, and a project template."
+    }
+  ]
+}

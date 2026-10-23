@@ -1,0 +1,173 @@
+name: .NET
+
+# The .NET component in dotnet/: build with warnings as errors, tests on Linux and Windows, format, locked restore and
+# known-vulnerable packages. It runs on every pull request with no path filter, so its required checks always report;
+# when a pull request doesn't change .NET (.github/changes.py), every job after `changes` is skipped, which a required
+# check counts as passing. Weekly, it also scans for newly published vulnerabilities and runs the suite five times to
+# find flaky tests.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "41 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dotnet-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  changes:
+    name: dotnet-changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      dotnet: ${{ steps.diff.outputs.dotnet }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Comparing with the base branch needs its history.
+          fetch-depth: 0
+
+      - name: Diff
+        id: diff
+        run: python3 .github/changes.py dotnet >> "$GITHUB_OUTPUT"
+
+  # Two jobs rather than a matrix: a skipped matrix job reports its name unexpanded, and the required checks need these
+  # names exactly.
+  ubuntu:
+    name: dotnet-ubuntu
+    needs: changes
+    # Skipped only when the detector says false: if it fails, its output is empty and the jobs run.
+    if: ${{ !cancelled() && needs.changes.outputs.dotnet != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: dotnet
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: dotnet/global.json
+
+      - name: Restore
+        run: dotnet restore --locked-mode
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        # A hanging test fails the run with a dump instead of stalling CI.
+        run: dotnet test --no-build --configuration Release --blame-hang-timeout 2m
+
+  windows:
+    name: dotnet-windows
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.dotnet != 'false' }}
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: dotnet
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: dotnet/global.json
+
+      - name: Restore
+        run: dotnet restore --locked-mode
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release --blame-hang-timeout 2m
+
+  quality:
+    name: dotnet-quality
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.dotnet != 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: dotnet
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: dotnet/global.json
+
+      - name: Restore
+        run: dotnet restore --locked-mode
+
+      - name: Format
+        run: dotnet format --no-restore --verify-no-changes
+
+      - name: Vulnerable packages
+        # bash runs with pipefail, so a failing list command fails the step. The negated grep must stay last: set -e
+        # ignores a negated command's status, so only the step's final status counts.
+        shell: bash
+        run: |
+          dotnet list package --vulnerable --include-transitive | tee vulnerable.txt
+          ! grep -q "has the following vulnerable packages" vulnerable.txt
+
+  flaky:
+    name: dotnet-flaky
+    # Weekly and on demand only: five runs of the suite, failing with the tests whose outcome varied.
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        working-directory: dotnet
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: dotnet/global.json
+
+      - name: Build
+        run: dotnet build --configuration Release
+
+      - name: Run the suite five times
+        # Each run's log names its failing tests; a mix of passing and failing runs means a flaky test.
+        run: |
+          outcomes=""
+          for run in 1 2 3 4 5; do
+            echo "::group::run $run"
+            if dotnet test --no-build --configuration Release --blame-hang-timeout 2m; then
+              outcomes="$outcomes pass"
+            else
+              outcomes="$outcomes fail"
+            fi
+            echo "::endgroup::"
+          done
+          echo "Outcomes:$outcomes"
+          case "$outcomes" in
+            *pass*fail* | *fail*pass*)
+              echo "::error::The suite's outcome varied across five runs:$outcomes; the failing runs' logs name the flaky tests."
+              exit 1 ;;
+            *fail*)
+              echo "::error::The suite failed in every run."
+              exit 1 ;;
+          esac
