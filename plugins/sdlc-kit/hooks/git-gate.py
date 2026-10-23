@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 """Before a Bash command: enforces the git and GitHub rules of docs/conventions.md, and runs the project's checks.
 
-It acts only in a repository whose top level has `.sdlc/checks.toml` (see the template's copy); elsewhere it does
-nothing. Rules for every agent: no commit on the default branch and no push to it; branch names with an allowed
-prefix; files staged in their own command before a commit; no force push and no remote branch deletion; `gh pr merge`
-only with `--auto`, which waits for the required checks; no change to branch protection, rulesets, repository
-settings, merges or branch refs through the API. The reviewer never commits or pushes. Any other agent never posts a
-verdict, never uses the reviewer's token and never prints the environment that holds it.
+A repository opts in with `.sdlc/checks.toml` at its top level (see the template's copy). The agent's rules apply to
+every command of the line, wherever it runs, when the session's project (the call's folder, or `CLAUDE_PROJECT_DIR`)
+opted in: `gh pr merge` only with `--auto`, which waits for the required checks; no change to branch protection,
+rulesets, repository settings, merges or branch refs through the API; and an agent other than the reviewer never posts
+a verdict, never uses the reviewer's token and never prints the environment that holds it (`env`, `printenv` with no
+name or the token's, `export` or `export -p`, `set` with no arguments). The git rules and checks apply to each git
+command in the repository it acts on, when that repository opted in: no commit on the default branch and no push to
+it; branch names with an allowed prefix; files staged in their own command before a commit; no force push and no
+remote branch deletion; the reviewer never commits or pushes.
 
-Every command of the line is checked, also inside subshells, `if` and loop bodies, wrappers such as `time`, `env`,
-`nohup` or `xargs`, `bash -c` scripts, `eval`, and a heredoc fed to a shell. The hook guards against mistakes and
-casual misuse, not against a determined adversary: branch protection and the review gate are the server-side
-backstop.
+Every simple command of the line is checked: those separated by `;`, `&`, `|`, `&&`, `||` or newlines; inside
+subshells, `{ …; }` groups, `if` and loop bodies; after `!`, leading assignments and the wrappers `time`, `env`,
+`command`, `exec`, `nohup` and `xargs`; in `bash`, `sh` or `zsh` `-c` scripts and `eval` text; in `$(…)` and backtick
+command substitutions, quoted or not; and in a heredoc or here-string fed or piped into a shell (`sh <<EOF`,
+`cat <<EOF | sh`). The hook guards against mistakes and casual misuse, not against a determined adversary: branch
+protection and the review gate are the server-side backstop.
 
 Checks come from `.sdlc/checks.toml`: before a commit that stages a component's code, its `before_commit` commands;
 before a push that changes the component, its `before_push` commands. Which paths a component owns is decided by the
@@ -52,6 +57,7 @@ WRAPPERS = {
     "nohup": set(),
     "xargs": {"-a", "-d", "-E", "-I", "-L", "-n", "-P", "-s"},
 }
+PIPES = {"|", "|&"}
 SHELLS = {"bash", "sh", "zsh"}
 SHELL_VALUE_OPTIONS = {"-o", "+o", "-O", "+O", "--rcfile", "--init-file"}
 
@@ -138,16 +144,77 @@ def load_config(root):
         block(f"Blocked: {sdlc_paths.CONFIG} does not parse ({error}); fix it first.")
 
 
-def commands(text):
-    """Each simple command in the text, as its words without redirections, with the text a heredoc or here-string
-    gives it as input (or None). Quoted text, newlines included, stays one word."""
-    bodies = []
-
+def mark_heredocs(text, bodies):
+    """The text with each heredoc's body moved to bodies and replaced by a mark naming it."""
     def mark(match):
         bodies.append(match["body"])
         return f"<< {HEREDOC_MARK}{len(bodies) - 1}{match['rest']}"
 
-    lexer = shlex.shlex(HEREDOC.sub(mark, text), posix=True, punctuation_chars=PUNCTUATION)
+    return HEREDOC.sub(mark, text)
+
+
+def closing_parenthesis(text, start):
+    """Where the `)` closing a `$(` that ends just before start is, or None; quoted parentheses don't count."""
+    depth, quote, escaped = 1, None, False
+    for at in range(start, len(text)):
+        char = text[at]
+        if escaped:
+            escaped = False
+        elif char == "\\" and quote != "'":
+            escaped = True
+        elif quote:
+            quote = None if char == quote else quote
+        elif char in "'\"":
+            quote = char
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return at
+    return None
+
+
+def substitutions(text):
+    """The commands of each backtick and quoted `$(…)` substitution in the text, which the shell runs before the
+    command holding them. An unquoted `$(…)` is left out: the lexer splits it at its parentheses, so its commands are
+    already the line's own."""
+    found, quote, escaped, at = [], None, False, 0
+    while at < len(text):
+        char = text[at]
+        if escaped:
+            escaped = False
+        elif char == "\\" and quote != "'":
+            escaped = True
+        elif quote == "'":
+            quote = None if char == "'" else quote
+        elif char == "`":
+            end = text.find("`", at + 1)
+            while end > 0 and text[end - 1] == "\\":
+                end = text.find("`", end + 1)
+            if end < 0:
+                break
+            found.append(text[at + 1:end])
+            at = end
+        elif quote == '"' and text.startswith("$(", at) and not text.startswith("$((", at):
+            end = closing_parenthesis(text, at + 2)
+            if end is None:
+                break
+            found.append(text[at + 2:end])
+            at = end
+        elif char == '"':
+            quote = None if quote else char
+        elif char == "'" and not quote:
+            quote = char
+        at += 1
+    return found
+
+
+def commands(text, bodies):
+    """Each simple command in the text, as its words without redirections, with the text a heredoc or here-string
+    gives it as input (or None); a later stage of a pipeline is given the earlier stage's input, as the earlier stage
+    may pass it on. Quoted text, newlines included, stays one word. The text's heredocs are marked in bodies."""
+    lexer = shlex.shlex(text, posix=True, punctuation_chars=PUNCTUATION)
     lexer.whitespace = " \t\r"
     lexer.whitespace_split = True
     words, stdin, redirect = [], None, None
@@ -161,7 +228,7 @@ def commands(text):
         elif token and set(token) <= SEPARATORS:
             if words:
                 yield words, stdin
-            words, stdin = [], None
+            words, stdin = [], stdin if token in PIPES else None
         elif token and set(token) <= set(PUNCTUATION):
             # A redirection: its target is the next word, and a file descriptor before it (2>) is not an argument.
             if words and words[-1].isdigit():
@@ -326,6 +393,9 @@ class Line:
         self.staged = None
         self.staging = False
         self.configs = {}
+        self.bodies = []
+        # The agent's rules follow the session's project, not the folders the line moves to.
+        self.opted_in = self.config(cwd) is not None
 
     def config(self, here):
         """The checks of the repository a folder is in, or None when it has not opted in."""
@@ -338,9 +408,13 @@ class Line:
         return self.branches.get(here) or git(here, "branch", "--show-current")
 
     def evaluate(self, text):
-        """Checks each command of a command line; a shell script or `eval` text inside it goes through here too."""
+        """Checks each command of a command line; a shell script, `eval` text or command substitution inside it goes
+        through here too."""
+        text = mark_heredocs(text, self.bodies)
+        for script in substitutions(text):
+            self.evaluate(script)
         try:
-            parsed = list(commands(text))
+            parsed = list(commands(text, self.bodies))
         except ValueError:
             # Unbalanced quotes: the shell will reject it too, but never let a commit on the default branch through.
             if re.search(r"\bgit\b[^\n]*\bcommit\b", text) and self.config(self.cwd) is not None \
@@ -366,19 +440,19 @@ class Line:
             self.check_gh(args)
         elif name == "git":
             self.check_git(args)
-        elif name in ("env", "printenv", "export"):
+        elif name in ("env", "printenv", "export", "set"):
             self.check_environment(name, args)
 
     def check_environment(self, name, args):
         """A non-reviewer never prints the environment, which holds the reviewer's token."""
         prints = (name == "env" or (name == "printenv" and (not args or REVIEWER_TOKEN in args))
-                  or (name == "export" and args in ([], ["-p"])))
-        if prints and not self.reviewer and self.config(self.cwd) is not None:
+                  or (name == "export" and args in ([], ["-p"])) or (name == "set" and not args))
+        if prints and not self.reviewer and self.opted_in:
             block("Blocked: only the reviewer reads the environment that holds the reviewer's token; print the "
                   "variables you need by name.")
 
     def check_gh(self, args):
-        if self.config(self.cwd) is None:
+        if not self.opted_in:
             return
         api = args[:1] == ["api"]
         pairs, positional = gh_options(args[1:], API_VALUE_OPTIONS) if api else gh_options(args, POST_VALUE_OPTIONS)
@@ -550,8 +624,8 @@ def new_branch(verb, rest, positional):
 def main():
     payload = json.load(sys.stdin)
     text = payload.get("tool_input", {}).get("command", "")
-    line = Line(payload.get("cwd") or ".", payload.get("agent_type"))
-    if not line.reviewer and TOKEN_EXPANSION.search(text) and line.config(line.cwd) is not None:
+    line = Line(payload.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or ".", payload.get("agent_type"))
+    if not line.reviewer and TOKEN_EXPANSION.search(text) and line.opted_in:
         block("Blocked: only the reviewer uses the reviewer's token.")
     line.evaluate(text)
     line.finish()

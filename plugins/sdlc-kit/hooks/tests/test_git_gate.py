@@ -204,6 +204,46 @@ class GitGateTest(unittest.TestCase):
             with self.subTest(command=command):
                 self.assert_blocked(command, "never push to main")
 
+    def test_a_command_substitution_is_checked(self):
+        for command in ("echo `git push origin HEAD:main`", 'echo "`git push origin HEAD:main`"',
+                        'echo "$(git push origin HEAD:main)"', 'echo "$(echo `git push origin HEAD:main`)"'):
+            with self.subTest(command=command):
+                self.assert_blocked(command, "never push to main")
+
+    def test_a_single_quoted_substitution_is_text(self):
+        self.assert_allowed("echo '`git push origin HEAD:main`' '$(git push origin HEAD:main)'")
+
+    def test_a_heredoc_piped_into_a_shell_is_checked(self):
+        for command in ("cat <<EOF | sh\ngit push origin HEAD:main\nEOF",
+                        "cat <<'EOF' | tr a a | bash\ngit push origin HEAD:main\nEOF",
+                        "cat <<< 'git push origin HEAD:main' | sh"):
+            with self.subTest(command=command):
+                self.assert_blocked(command, "never push to main")
+
+    def test_a_commit_message_from_a_heredoc_substitution_is_allowed(self):
+        self.assert_allowed("git commit -m \"$(cat <<'EOF'\nFix it (now)\n\ngit push origin main\nEOF\n)\"")
+
+    def scratch_folder(self, prefix):
+        """A new folder outside the repository, spelled with forward slashes for the command line."""
+        folder = tempfile.TemporaryDirectory(prefix=prefix)
+        self.addCleanup(folder.cleanup)
+        return folder.name.replace("\\", "/")
+
+    def test_the_agent_rules_apply_after_leaving_the_project(self):
+        outside = self.scratch_folder("git-gate-outside-")
+        for command, says in ((f'cd {outside} && gh pr comment 1 -R o/r --body "**Verdict: APPROVE** at abc"',
+                               "only the reviewer posts verdicts"),
+                              (f"cd {outside} && gh pr merge 1 -R o/r --merge", "gh pr merge --auto"),
+                              (f"cd {outside} && env", "only the reviewer reads the environment"),
+                              (f'cd {outside} && echo "$SDLC_REVIEWER_TOKEN"', "only the reviewer uses")):
+            with self.subTest(command=command):
+                self.assert_blocked(command, says, agent_type="sdlc-kit:fixer")
+
+    def test_the_git_rules_follow_the_repository_a_command_acts_on(self):
+        plain = self.scratch_folder("git-gate-plain-")
+        subprocess.run(["git", "init", "--quiet", "--initial-branch=main"], cwd=plain, check=True)
+        self.assert_allowed(f"git -C {plain} commit -m x")
+
     def test_a_commit_in_a_subshell_after_moving_to_main_is_blocked(self):
         self.assert_blocked("git checkout main; (git commit -m x)", "never commit on main")
 
@@ -256,10 +296,11 @@ class GitGateTest(unittest.TestCase):
 
     def test_printing_the_environment_is_blocked(self):
         for command in ("env", "env | grep TOKEN", "env FOO=1", "printenv", "printenv SDLC_REVIEWER_TOKEN", "export -p",
-                        "export"):
+                        "export", "set", "set | grep SDLC"):
             with self.subTest(command=command):
                 self.assert_blocked(command, "only the reviewer reads the environment", agent_type="sdlc-kit:fixer")
         self.assert_allowed("printenv HOME", agent_type="sdlc-kit:fixer")
+        self.assert_allowed("set -e", agent_type="sdlc-kit:fixer")
         self.assert_allowed("env", agent_type="sdlc-kit:reviewer")
 
     def test_naming_the_token_without_expanding_it_is_allowed(self):

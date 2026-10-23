@@ -1,5 +1,6 @@
 """Which component a path belongs to, from .sdlc/checks.toml. The git hook (before a commit and a push) and
-.github/changes.py (which component's CI a pull request runs) both decide with this module, so they always agree.
+.github/changes.py (which component's CI a pull request runs) share this one definition: the hook loads the plugin's
+copy and CI the project's, so they agree while the project's copy matches the installed plugin's version.
 
 A path belongs to a component when it is under one of its paths or is one of its workflows
 (`.github/workflows/<name>.yml` or `<name>-*.yml`); a shared path belongs to every component. Docs (the `docs`
