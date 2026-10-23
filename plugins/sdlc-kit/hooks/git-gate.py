@@ -2,11 +2,12 @@
 """Before a Bash command: enforces the git and GitHub rules of docs/conventions.md, and runs the project's checks.
 
 A repository opts in with `.sdlc/checks.toml` at its top level (see the template's copy). The agent's rules apply to
-every command of the line, wherever it runs, when the session's project (the call's folder, or `CLAUDE_PROJECT_DIR`)
-opted in: `gh pr merge` only with `--auto`, which waits for the required checks; no change to branch protection,
-rulesets, repository settings, merges or branch refs through the API; and an agent other than the reviewer never posts
-a verdict, never uses the reviewer's token and never prints the environment that holds it (`env`, `printenv` with no
-name or the token's, `export` or `export -p`, `set` with no arguments). The git rules and checks apply to each git
+every command of the line, wherever it runs, when the session's project opted in (the call's folder or
+`CLAUDE_PROJECT_DIR` is in an opted-in repository): `gh pr merge` only with `--auto`, which waits for the required
+checks; no change to branch protection, rulesets, repository settings, merges or branch refs through the API; and an
+agent other than the reviewer never posts a verdict, never uses the reviewer's token and never prints the environment
+that holds it (`env`, `printenv` with no name or the token's, `export` or `export -p`, `set` with no arguments,
+`declare` or `typeset` with no names, bare or with `-p` or `-x`). The git rules and checks apply to each git
 command in the repository it acts on, when that repository opted in: no commit on the default branch and no push to
 it; branch names with an allowed prefix; files staged in their own command before a commit; no force push and no
 remote branch deletion; the reviewer never commits or pushes.
@@ -58,6 +59,9 @@ WRAPPERS = {
     "xargs": {"-a", "-d", "-E", "-I", "-L", "-n", "-P", "-s"},
 }
 PIPES = {"|", "|&"}
+# Builtins that list every variable, exported ones included, when given no names: bare, or with -p or -x.
+DECLARES = ("declare", "typeset")
+DECLARE_LISTING_FLAGS = "px"
 SHELLS = {"bash", "sh", "zsh"}
 SHELL_VALUE_OPTIONS = {"-o", "+o", "-O", "+O", "--rcfile", "--init-file"}
 
@@ -385,7 +389,7 @@ class Line:
     """One Bash tool call's command line, checked command by command. The hook runs before the whole line, so every
     rule sees the repository as it was before any of it ran."""
 
-    def __init__(self, cwd, agent_type):
+    def __init__(self, cwd, agent_type, project=None):
         self.cwd = cwd
         self.reviewer = is_reviewer(agent_type)
         self.branches = {}
@@ -394,8 +398,9 @@ class Line:
         self.staging = False
         self.configs = {}
         self.bodies = []
-        # The agent's rules follow the session's project, not the folders the line moves to.
-        self.opted_in = self.config(cwd) is not None
+        # The agent's rules follow the session's project, not the folders the line moves to. The call's folder may
+        # be outside it, left there by an earlier call's `cd`, so the project's own folder counts too.
+        self.opted_in = any(self.config(folder) is not None for folder in (cwd, project) if folder)
 
     def config(self, here):
         """The checks of the repository a folder is in, or None when it has not opted in."""
@@ -440,13 +445,15 @@ class Line:
             self.check_gh(args)
         elif name == "git":
             self.check_git(args)
-        elif name in ("env", "printenv", "export", "set"):
+        elif name in ("env", "printenv", "export", "set", *DECLARES):
             self.check_environment(name, args)
 
     def check_environment(self, name, args):
         """A non-reviewer never prints the environment, which holds the reviewer's token."""
+        lists_variables = name in DECLARES and all(arg.startswith("-") for arg in args) and (
+            not args or any(flag in arg for arg in args for flag in DECLARE_LISTING_FLAGS))
         prints = (name == "env" or (name == "printenv" and (not args or REVIEWER_TOKEN in args))
-                  or (name == "export" and args in ([], ["-p"])) or (name == "set" and not args))
+                  or (name == "export" and args in ([], ["-p"])) or (name == "set" and not args) or lists_variables)
         if prints and not self.reviewer and self.opted_in:
             block("Blocked: only the reviewer reads the environment that holds the reviewer's token; print the "
                   "variables you need by name.")
@@ -624,7 +631,8 @@ def new_branch(verb, rest, positional):
 def main():
     payload = json.load(sys.stdin)
     text = payload.get("tool_input", {}).get("command", "")
-    line = Line(payload.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or ".", payload.get("agent_type"))
+    project = os.environ.get("CLAUDE_PROJECT_DIR")
+    line = Line(payload.get("cwd") or project or ".", payload.get("agent_type"), project)
     if not line.reviewer and TOKEN_EXPANSION.search(text) and line.opted_in:
         block("Blocked: only the reviewer uses the reviewer's token.")
     line.evaluate(text)

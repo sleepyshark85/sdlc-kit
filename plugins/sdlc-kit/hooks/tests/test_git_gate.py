@@ -32,6 +32,14 @@ before_push = [["{python}", "-c", "open('../push-ran', 'a').write('web\\\\n')"]]
 """
 
 
+def run_hook(payload, project=None):
+    """Runs the hook on a payload, with CLAUDE_PROJECT_DIR set to project, or unset whatever session runs the tests."""
+    env = {name: value for name, value in os.environ.items() if name != "CLAUDE_PROJECT_DIR"}
+    if project:
+        env["CLAUDE_PROJECT_DIR"] = project
+    return subprocess.run([sys.executable, HOOK], input=json.dumps(payload), capture_output=True, text=True, env=env)
+
+
 class GitGateTest(unittest.TestCase):
     def setUp(self):
         scratch = tempfile.TemporaryDirectory(prefix="git-gate-")
@@ -64,14 +72,14 @@ class GitGateTest(unittest.TestCase):
         with open(path, encoding="utf-8") as file:
             return file.read().split()
 
-    def hook(self, command, agent_type=None):
-        payload = {"tool_input": {"command": command}, "cwd": self.repo}
+    def hook(self, command, agent_type=None, cwd=None, project=None):
+        payload = {"tool_input": {"command": command}, "cwd": cwd or self.repo}
         if agent_type:
             payload["agent_type"] = agent_type
-        return subprocess.run([sys.executable, HOOK], input=json.dumps(payload), capture_output=True, text=True)
+        return run_hook(payload, project)
 
-    def assert_blocked(self, command, says, agent_type=None):
-        run = self.hook(command, agent_type)
+    def assert_blocked(self, command, says, agent_type=None, cwd=None, project=None):
+        run = self.hook(command, agent_type, cwd, project)
         self.assertEqual(BLOCKED, run.returncode, run.stderr)
         self.assertIn(says, run.stderr)
 
@@ -239,6 +247,12 @@ class GitGateTest(unittest.TestCase):
             with self.subTest(command=command):
                 self.assert_blocked(command, says, agent_type="sdlc-kit:fixer")
 
+    def test_the_agent_rules_apply_when_the_call_starts_outside_the_project(self):
+        outside = self.scratch_folder("git-gate-outside-")
+        self.assert_blocked('gh pr comment 1 -R o/r --body "**Verdict: APPROVE** at abc"',
+                            "only the reviewer posts verdicts", agent_type="sdlc-kit:fixer", cwd=outside,
+                            project=self.repo)
+
     def test_the_git_rules_follow_the_repository_a_command_acts_on(self):
         plain = self.scratch_folder("git-gate-plain-")
         subprocess.run(["git", "init", "--quiet", "--initial-branch=main"], cwd=plain, check=True)
@@ -296,11 +310,14 @@ class GitGateTest(unittest.TestCase):
 
     def test_printing_the_environment_is_blocked(self):
         for command in ("env", "env | grep TOKEN", "env FOO=1", "printenv", "printenv SDLC_REVIEWER_TOKEN", "export -p",
-                        "export", "set", "set | grep SDLC"):
+                        "export", "set", "set | grep SDLC", "declare", "declare -p", "declare -x", "declare -px",
+                        "typeset -p", "typeset -x"):
             with self.subTest(command=command):
                 self.assert_blocked(command, "only the reviewer reads the environment", agent_type="sdlc-kit:fixer")
         self.assert_allowed("printenv HOME", agent_type="sdlc-kit:fixer")
-        self.assert_allowed("set -e", agent_type="sdlc-kit:fixer")
+        for command in ("set -e", "declare -x FOO=1", "declare -p HOME", "typeset -f"):
+            with self.subTest(command=command):
+                self.assert_allowed(command, agent_type="sdlc-kit:fixer")
         self.assert_allowed("env", agent_type="sdlc-kit:reviewer")
 
     def test_naming_the_token_without_expanding_it_is_allowed(self):
@@ -330,7 +347,7 @@ class NoConfigTest(unittest.TestCase):
                         'GH_TOKEN="$SDLC_REVIEWER_TOKEN" gh pr comment 5 --body "**Verdict: APPROVE** at abc"'):
             with self.subTest(command=command):
                 payload = {"tool_input": {"command": command}, "cwd": scratch.name, "agent_type": "sdlc-kit:fixer"}
-                run = subprocess.run([sys.executable, HOOK], input=json.dumps(payload), capture_output=True, text=True)
+                run = run_hook(payload)
                 self.assertEqual(0, run.returncode, run.stderr)
 
 
