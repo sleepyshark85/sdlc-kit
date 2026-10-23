@@ -1,0 +1,33 @@
+name: Quality
+
+# Checks every pull request needs, whatever it changes: the tests of the review gate, the change detector, the link
+# check and the workflow rules; the docs' links; and the workflows' permissions and pinned actions. It never skips, so
+# its required check always reports.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Tooling tests
+        run: python3 -B -m unittest discover --start-directory .github
+
+      - name: Links
+        run: python3 .github/links.py
+
+      - name: Workflow rules
+        run: python3 .github/workflow_rules.py

@@ -1,0 +1,7 @@
+# Keeps the actions' pinned shas current, weekly; a language pack adds its ecosystem below.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

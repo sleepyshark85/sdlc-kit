@@ -1,0 +1,21 @@
+# The project's components, for the git hook (checks before a commit and a push) and .github/changes.py (which
+# component's CI a pull request runs). A language pack adds its [[component]] block; until then only the git rules
+# apply.
+
+# Branch name prefixes the hook allows.
+branch_prefixes = ["feature/", "fix/", "refactor/", "docs/", "chore/", "test/"]
+
+# Paths every component treats as its own, such as shared test fixtures.
+shared = []
+
+# Docs: outside a component's paths and the tooling (.github/, .claude/, .sdlc/), they belong to no component, so
+# they trigger no component's tests before a push or in CI (.sdlc/sdlc_paths.py).
+docs = '\.(md|html|svg|png)$'
+
+# [[component]]
+# name = "dotnet"                   # also names its workflows: .github/workflows/dotnet.yml, dotnet-*.yml
+# paths = ["dotnet/"]               # path prefixes it owns; "" owns everything
+# code = '\.(cs|csproj|props)$'     # staged files that trigger before_commit
+# directory = "dotnet"              # where its commands run
+# before_commit = [["dotnet", "format", "--verify-no-changes"]]
+# before_push = [["dotnet", "test"]]

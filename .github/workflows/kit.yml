@@ -1,0 +1,55 @@
+name: Kit
+
+# The kit's own checks on every pull request: the tests of the hooks, the scaffolding script, the template's tooling
+# and the .NET pack's scripts; a project scaffolded with the .NET pack passing its own tooling tests and link check;
+# and the kit's links and workflow rules.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: kit-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Hooks
+        run: python3 -B -m unittest discover --start-directory plugins/sdlc-kit/hooks/tests
+
+      - name: Scaffolding
+        run: python3 -B -m unittest discover --start-directory plugins/sdlc-kit/scripts/tests
+
+      - name: Template tooling
+        working-directory: plugins/sdlc-kit/template
+        run: python3 -B -m unittest discover --start-directory .github
+
+      - name: A scaffolded .NET project
+        # A new project, as the new-project skill makes it, passes its own quality job's steps.
+        run: |
+          project="$RUNNER_TEMP/shop"
+          python3 plugins/sdlc-kit/scripts/new_project.py create "$project" Shop dotnet
+          cd "$project"
+          git init --quiet -b main
+          git add -A
+          python3 -B -m unittest discover --start-directory .github
+          python3 .github/links.py
+          python3 .github/workflow_rules.py
+
+      - name: Links
+        run: python3 plugins/sdlc-kit/template/.github/links.py
+
+      - name: Workflow rules
+        # The kit's own workflows, the template's and the .NET pack's.
+        run: >-
+          python3 plugins/sdlc-kit/template/.github/workflow_rules.py .github/workflows
+          plugins/sdlc-kit/template/.github/workflows plugins/sdlc-kit/packs/dotnet/files/.github/workflows

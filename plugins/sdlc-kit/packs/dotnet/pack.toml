@@ -1,0 +1,28 @@
+# What the .NET pack adds to a project; scripts/new_project.py reads it. Its files/ folder is copied over the project's
+# root as it is.
+
+# The checks branch protection requires, passed to scripts/setup-repo.sh.
+required_checks = ["dotnet-changes", "dotnet-ubuntu", "dotnet-windows", "dotnet-quality",
+                   "dotnet-mutation-changes", "dotnet-mutation", "codeql (csharp)"]
+
+# Appended to .sdlc/checks.toml.
+component = '''
+[[component]]
+name = "dotnet"
+paths = ["dotnet/"]
+code = '\.(cs|csproj|props|targets|slnx|json|editorconfig)$'
+directory = "dotnet"
+before_commit = [["dotnet", "format", "--verify-no-changes"],
+                 ["dotnet", "build", "--configuration", "Release", "--nologo", "--verbosity", "quiet"]]
+before_push = [["dotnet", "test", "--configuration", "Release", "--nologo", "--verbosity", "quiet",
+                "--blame-hang-timeout", "2m"]]
+'''
+
+# Added to the matrix of .github/workflows/codeql.yml.
+codeql = { language = "csharp", build-mode = "none" }
+
+# Added to .github/dependabot.yml.
+dependabot = { package-ecosystem = "nuget", directory = "/dotnet" }
+
+# Added to .claude/settings.json: after an edit, the C# file rules.
+after_edit_hook = ".claude/hooks/cs-rules.py"
