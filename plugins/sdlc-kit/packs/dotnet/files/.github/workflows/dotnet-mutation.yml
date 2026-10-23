@@ -1,9 +1,10 @@
 name: .NET mutation
 
-# Stryker.NET on each library under dotnet/ that has a stryker-config.json (the app and the test kit included). A pull
-# request mutates only the files it changed; weekly and manual runs mutate everything. Both fail below the package's
-# break threshold, its floor in docs/decisions.md. The surviving mutants go to the job summary, so the developer and
-# the reviewer see them on the checks page. A pull request that doesn't change .NET skips it, as dotnet.yml does.
+# Stryker.NET on each library under dotnet/ that has a stryker-config.json (the app and the test kit included); with
+# none at all, it fails rather than pass untested. A pull request mutates only the files it changed; weekly and manual
+# runs mutate everything. Both fail below the package's break threshold, its floor in docs/decisions.md. The surviving
+# mutants go to the job summary, so the developer and the reviewer see them on the checks page. A pull request that
+# doesn't change .NET skips it, as dotnet.yml does.
 on:
   pull_request:
   schedule:
@@ -62,8 +63,13 @@ jobs:
         shell: bash
         working-directory: dotnet
         run: |
+          configs=$(git ls-files '*/stryker-config.json')
+          if [ -z "$configs" ]; then
+            echo "::error::No stryker-config.json under dotnet/; every library, the app and the test kit need one."
+            exit 1
+          fi
           status=0
-          for config in $(git ls-files '*/stryker-config.json'); do
+          for config in $configs; do
             package=$(dirname "$config")
             echo "::group::$package"
             if [ "${{ github.event_name }}" = pull_request ]; then

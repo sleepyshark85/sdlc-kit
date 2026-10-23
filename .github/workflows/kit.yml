@@ -2,7 +2,7 @@ name: Kit
 
 # The kit's own checks on every pull request: the tests of the hooks, the scaffolding script, the template's tooling
 # and the .NET pack's scripts; a project scaffolded with the .NET pack passing its own tooling tests and link check;
-# and the kit's links.
+# and the kit's links and workflow rules.
 on:
   push:
     branches: [main]
@@ -43,6 +43,13 @@ jobs:
           git add -A
           python3 -B -m unittest discover --start-directory .github
           python3 .github/links.py
+          python3 .github/workflow_rules.py
 
       - name: Links
         run: python3 plugins/sdlc-kit/template/.github/links.py
+
+      - name: Workflow rules
+        # The kit's own workflows, the template's and the .NET pack's.
+        run: >-
+          python3 plugins/sdlc-kit/template/.github/workflow_rules.py .github/workflows
+          plugins/sdlc-kit/template/.github/workflows plugins/sdlc-kit/packs/dotnet/files/.github/workflows

@@ -1,4 +1,4 @@
-# What the .NET pack adds to a project; scripts/apply-pack.py reads it. Its files/ folder is copied over the project's
+# What the .NET pack adds to a project; scripts/new_project.py reads it. Its files/ folder is copied over the project's
 # root as it is.
 
 # The checks branch protection requires, passed to scripts/setup-repo.sh.

@@ -40,6 +40,8 @@ def write(path, text):
 def create(target, name, packs):
     if os.path.exists(target) and os.listdir(target):
         raise KitError(f"{target} is not empty; a project starts in a new or empty folder.")
+    for pack in packs:
+        load_manifest(pack)
     shutil.copytree(TEMPLATE, target, dirs_exist_ok=True)
     for relative in NAMED_FILES:
         path = os.path.join(target, relative)
@@ -47,13 +49,19 @@ def create(target, name, packs):
     return [check for pack in packs for check in add_pack(target, pack)]
 
 
+def load_manifest(pack):
+    """A pack's pack.toml; refuses a name the kit has no pack for."""
+    path = os.path.join(PACKS, pack, "pack.toml")
+    if not os.path.isfile(path):
+        raise KitError(f"No pack named {pack}; the kit has: {', '.join(sorted(os.listdir(PACKS)))}.")
+    with open(path, "rb") as file:
+        return tomllib.load(file)
+
+
 def add_pack(project, pack):
     """Adds a pack to a project; returns its required checks."""
     folder = os.path.join(PACKS, pack)
-    if not os.path.isdir(folder):
-        raise KitError(f"No pack named {pack}; the kit has: {', '.join(sorted(os.listdir(PACKS)))}.")
-    with open(os.path.join(folder, "pack.toml"), "rb") as file:
-        manifest = tomllib.load(file)
+    manifest = load_manifest(pack)
     checks = os.path.join(project, ".sdlc", "checks.toml")
     with open(checks, "rb") as file:
         if pack in (component["name"] for component in tomllib.load(file).get("component", [])):

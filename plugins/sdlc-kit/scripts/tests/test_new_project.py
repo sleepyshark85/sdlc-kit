@@ -66,6 +66,12 @@ class NewProjectTest(unittest.TestCase):
         with self.assertRaisesRegex(kit.KitError, "No pack named cobol"):
             kit.add_pack(self.target, "cobol")
 
+    def test_an_unknown_pack_leaves_no_project_behind(self):
+        with self.assertRaisesRegex(kit.KitError, "No pack named dotnett"):
+            kit.create(self.target, "Shop", ["dotnet", "dotnett"])
+
+        self.assertFalse(os.path.exists(self.target))
+
     def test_a_pack_never_replaces_a_project_file(self):
         kit.create(self.target, "Shop", [])
         os.makedirs(os.path.join(self.target, "dotnet"))

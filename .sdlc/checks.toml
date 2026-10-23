@@ -1,0 +1,5 @@
+# The kit follows the git rules it ships: the plugin's git hook applies them in a repository with this file. The kit
+# has no components, so no checks run before a commit or a push; .github/workflows/kit.yml runs its tests.
+
+# Branch name prefixes the hook allows.
+branch_prefixes = ["feature/", "fix/", "refactor/", "docs/", "chore/", "test/"]

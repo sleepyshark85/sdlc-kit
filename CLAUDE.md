@@ -18,4 +18,5 @@ defined in [`docs/sdlc.md`](docs/sdlc.md); the [README](README.md) maps each pra
   - `python3 -B -m unittest discover -s plugins/sdlc-kit/scripts/tests`
   - in `plugins/sdlc-kit/template`: `python3 -B -m unittest discover -s .github`
   - `python3 plugins/sdlc-kit/template/.github/links.py`
+  - `python3 plugins/sdlc-kit/template/.github/workflow_rules.py .github/workflows plugins/sdlc-kit/template/.github/workflows plugins/sdlc-kit/packs/dotnet/files/.github/workflows`
 - Python scripts use the standard library only (3.11+), so a new project needs nothing installed for its tooling.

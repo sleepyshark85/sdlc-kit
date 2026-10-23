@@ -8,7 +8,8 @@ branch_prefixes = ["feature/", "fix/", "refactor/", "docs/", "chore/", "test/"]
 # Paths every component treats as its own, such as shared test fixtures.
 shared = []
 
-# Files that never trigger a component's tests before a push.
+# Docs: outside a component's paths and the tooling (.github/, .claude/, .sdlc/), they belong to no component, so
+# they trigger no component's tests before a push or in CI (.sdlc/sdlc_paths.py).
 docs = '\.(md|html|svg|png)$'
 
 # [[component]]

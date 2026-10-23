@@ -47,8 +47,9 @@ Branch protection on `main` (applied by `scripts/setup-repo.sh`) requires these,
 
 - **The review gate** (`.github/review_gate.py`) passes when the newest verdict naming the PR's newest commit is
   `**Verdict: APPROVE** at <that full sha>`, posted by a trusted author: the logins in the `REVIEWERS` repository
-  variable (the reviewer agent's identity and the owner's). An approval carries over clean merges of `main` into the
-  PR; anything else waits for a new verdict. The script's docstring has the exact rule.
+  variable, which holds the reviewer agent's identity only. The other agents post as the owner, so the owner's login
+  is not trusted: an owner who approves by hand posts with the reviewer identity. An approval carries over clean
+  merges of `main` into the PR; anything else waits for a new verdict. The script's docstring has the exact rule.
 - **A component's CI runs only when the PR changes it** (`.github/changes.py`); its jobs are skipped otherwise, which
   a required check counts as passing. Never add a path filter: a required check that never reports blocks the merge.
 

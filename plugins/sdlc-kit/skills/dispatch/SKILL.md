@@ -27,9 +27,10 @@ Kind asked for: `$0` (`developer`, `fix`, `review` or `merge-check`).
 
 - Never read diffs, conflict hunks, whole files or full logs yourself: use `head` or `grep`, or dispatch a
   merge-check, a fixer or a reviewer, and act on its short report.
-- Set auto-merge (`gh pr merge N --auto --merge --delete-branch`) in the same step as reading an approving report
-  with nothing in `Needs the lead`. The required `review` check means it merges only on an approving verdict on its
-  head; to doubt an approval, ask for a strict re-review by a new reviewer, which counts as one of the PR's rounds.
+- Set auto-merge (`gh pr merge N --auto --merge`; GitHub deletes the merged branch) in the same step as reading an
+  approving report with nothing in `Needs the lead`. The required `review` check means it merges only on an approving
+  verdict on its head; to doubt an approval, ask for a strict re-review by a new reviewer, which counts as one of the
+  PR's rounds.
 - Handle each report in one step: decide and send the next brief.
 - Review rounds run without the lead: the agent that fixes a verdict sends the next round to the PR's reviewer
   ([fix](templates/fix.md)). Only the lead dispatches a new reviewer, takes round 3's outcome to the owner (and labels

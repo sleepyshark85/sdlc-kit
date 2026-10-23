@@ -12,9 +12,10 @@ DECLARATION = re.compile(
 
 
 def requirement_ids(root):
-    """The requirement ID prefixes, such as TOOL or CTX, from REQUIREMENTS.md."""
+    """The requirement ID prefixes, such as AREA in AREA-01, from REQUIREMENTS.md."""
     try:
-        text = open(os.path.join(root, "REQUIREMENTS.md"), encoding="utf-8").read()
+        with open(os.path.join(root, "REQUIREMENTS.md"), encoding="utf-8") as file:
+            text = file.read()
     except OSError:
         return None
     prefixes = sorted(set(re.findall(r"^\| ([A-Z]{2,5})-\d+ \|", text, re.M)))
@@ -36,9 +37,10 @@ def main():
     path = payload.get("tool_input", {}).get("file_path") or ""
     root = payload.get("cwd") or "."
     parts = path.replace("\\", "/").split("/")
-    if not path.endswith(".cs") or "bin" in parts or "obj" in parts or "spikes" in parts or not os.path.exists(path):
+    if not path.endswith(".cs") or "bin" in parts or "obj" in parts or not os.path.exists(path):
         return
-    text = open(path, encoding="utf-8").read()
+    with open(path, encoding="utf-8") as file:
+        text = file.read()
     problems = []
     types = DECLARATION.findall(text)
     name = os.path.basename(path)

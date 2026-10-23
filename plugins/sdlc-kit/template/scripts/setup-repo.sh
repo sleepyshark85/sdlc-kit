@@ -4,7 +4,9 @@
 #
 # Usage: scripts/setup-repo.sh <owner/repo> <reviewer login> [extra required check...]
 #   The reviewer login is the GitHub identity the reviewer agent posts its verdicts as (docs/conventions.md, The
-#   review gate); the owner's own login is trusted as well. Extra checks are a pack's, such as "dotnet-ubuntu".
+#   review gate), and the only login the gate trusts: agents post as the owner, so trusting the owner's login would let
+#   any agent approve. An owner who approves by hand posts with the reviewer identity. Extra checks are a pack's, such
+#   as "dotnet-ubuntu".
 set -euo pipefail
 
 if [ $# -lt 2 ]; then
@@ -14,13 +16,14 @@ fi
 repo=$1
 reviewer=$2
 shift 2
-owner_login=$(gh api user --jq .login)
 checks=(review quality "codeql (actions)" "$@")
 
-echo "Merge commits only, auto-merge on: the pipeline merges with 'gh pr merge --auto --merge'."
+# GitHub deletes a merged branch itself (gh's --delete-branch does not with --auto), and retargets the pull requests
+# stacked on it.
+echo "Merge commits only, auto-merge on, merged branches deleted: the pipeline merges with gh pr merge --auto --merge."
 gh api -X PATCH "repos/$repo" \
   -F allow_merge_commit=true -F allow_squash_merge=false -F allow_rebase_merge=false \
-  -F allow_auto_merge=true -F delete_branch_on_merge=false > /dev/null
+  -F allow_auto_merge=true -F delete_branch_on_merge=true > /dev/null
 
 echo "Branch protection on main: required checks, up to date, resolved conversations, admins included."
 contexts=$(printf '%s\n' "${checks[@]}" | python3 -c 'import json, sys; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')
@@ -36,8 +39,8 @@ gh api -X PUT "repos/$repo/branches/main/protection" --input - > /dev/null <<EOF
 }
 EOF
 
-echo "Verdicts count only from the reviewer's identity and the owner's."
-gh variable set REVIEWERS --repo "$repo" --body "$reviewer,$owner_login"
+echo "Verdicts count only from the reviewer's identity."
+gh variable set REVIEWERS --repo "$repo" --body "$reviewer"
 
 echo "Secret scanning, push protection, non-provider patterns and validity checks; Dependabot security updates."
 # A private repository needs GitHub's secret protection for these; without it GitHub refuses, and the script says so.

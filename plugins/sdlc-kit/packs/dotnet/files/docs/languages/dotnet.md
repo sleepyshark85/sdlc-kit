@@ -10,7 +10,9 @@ How .NET code is written here, on top of `docs/conventions.md`. The code lives i
 - **Nullable on, warnings are errors,** `latest-recommended` analyzers and the style in `.editorconfig`. A
   suppression needs a reason the reviewer agrees with, on its line.
 - **Public items have doc comments** (CS1591) and are declared in the project's `PublicAPI.Unshipped.txt`
-  (`Microsoft.CodeAnalysis.PublicApiAnalyzers`): a new public item shows in the diff. `internal` is the default.
+  (`Microsoft.CodeAnalysis.PublicApiAnalyzers`, which `src/Directory.Build.props` adds to every library): a new
+  public item shows in the diff. Each library starts with both `PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt`,
+  empty. `internal` is the default.
 - **Each project registers its own services** (`Add…` extension methods on `IServiceCollection`); the application
   composes them in one place, and that composition is the switch for dark work: an unfinished feature's `Add…` call
   arrives with its switch-on task.
@@ -35,4 +37,5 @@ How .NET code is written here, on top of `docs/conventions.md`. The code lives i
 | Mutation, whole library | `dotnet stryker`, in the library's folder |
 
 A library gets mutation testing by a `stryker-config.json` in its folder, from `stryker-config.template.json`; its
-`break` threshold is its floor, recorded in `docs/decisions.md`. The app and the test kit get one too.
+`break` threshold is its floor, recorded in `docs/decisions.md`. Every library, the app and the test kit need one:
+the `dotnet-mutation` check fails when `dotnet/` has none.

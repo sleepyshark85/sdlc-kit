@@ -38,7 +38,8 @@ plugins/sdlc-kit/
     new-project/                    scaffolds a project and walks the owner through their steps
   hooks/
     hooks.json                      wires the two hooks into every session that has the plugin
-    git-gate.py                     git and GitHub rules, and the project's checks before a commit and a push
+    git-gate.py                     git and GitHub rules, and the project's checks before a commit and a push,
+                                    in a repository with .sdlc/checks.toml
     context-size.py                 logs each agent's context size; warns at 150k and 300k tokens
     tests/
   scripts/
@@ -54,11 +55,13 @@ plugins/sdlc-kit/
     docs/traceability.md            requirement → tests
     docs/plan/template.md           a wave's plan: one section per task
     .sdlc/checks.toml               components, their paths and checks (read by the hook and changes.py)
+    .sdlc/sdlc_paths.py             which component a path belongs to; shared by the hook and changes.py
     .claude/settings.json           permission rules: read-only commands allowed, destructive ones denied
     .github/
       review_gate.py                the review gate: a verdict naming the newest commit, from a trusted login
       changes.py                    which component a PR changes; docs-only PRs skip the builds
       links.py                      checks the Markdown's relative links and anchors
+      workflow_rules.py             every workflow: top-level permissions, actions pinned by commit sha
       test_*.py                     the tooling's tests, run by the quality workflow
       dependabot.yml                weekly updates of the pinned actions (and each pack's ecosystem)
       workflows/                    review, quality, codeql, scorecard
@@ -69,6 +72,7 @@ plugins/sdlc-kit/
       files/                        copied over the project: dotnet/ build files, docs/languages/dotnet.md,
                                     .NET and mutation workflows, the survivors summary, the C# file-rules hook
 .github/workflows/                  the kit's own CI (kit.yml) and review gate (review.yml)
+.sdlc/checks.toml                   the kit follows its own git rules (branch prefixes; no components)
 ```
 
 ## Best practices and where the kit covers them
@@ -76,6 +80,7 @@ plugins/sdlc-kit/
 Each practice, the industry source or reason behind it, the parts of the kit that cover it, and its status:
 
 - **Enforced:** a hook, check or script fails without it.
+- **Reported:** a scheduled job measures it; nothing fails.
 - **Guided:** an agent definition, skill or template asks for it, and the reviewer checks it.
 - **Trial:** a practice not yet proven by a project's metrics; [`docs/sdlc.md`](docs/sdlc.md#changing-the-process)
   says how it is kept or dropped.
@@ -123,9 +128,9 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | Dependency vulnerabilities | NIST SSDF | `template/.github/dependabot.yml`; .NET pack `dotnet-quality` (vulnerable packages, weekly too) | Enforced |
 | Secret scanning with push protection, non-provider patterns, validity checks | Secrets leak through agents too | `scripts/setup-repo.sh` | Enforced (once run) |
 | New dependencies justified | Package hallucination (slopsquatting) | quality bar *Dependencies*; `docs/decisions.md` *Dependencies* | Guided |
-| Least-privilege workflow tokens | OpenSSF Scorecard | every workflow's `permissions` | Enforced |
-| Actions pinned by commit sha, kept current | OpenSSF Scorecard, SLSA | every workflow; `dependabot.yml` (`github-actions`) | Enforced |
-| OpenSSF Scorecard | Supply-chain hygiene, measured | `template/.github/workflows/scorecard.yml` | Enforced |
+| Least-privilege workflow tokens | OpenSSF Scorecard | every workflow's top-level `permissions`, checked by `workflow_rules.py` in the `quality` workflow | Enforced |
+| Actions pinned by commit sha, kept current | OpenSSF Scorecard, SLSA | every workflow, checked by `workflow_rules.py`; `dependabot.yml` (`github-actions`) | Enforced |
+| OpenSSF Scorecard | Supply-chain hygiene, measured | `template/.github/workflows/scorecard.yml` | Reported |
 | Locked dependency restores | Reproducible builds | .NET pack: `RestorePackagesWithLockFile`, `--locked-mode` in CI | Enforced |
 | SBOM and build provenance | SLSA | — | Planned |
 
@@ -148,7 +153,7 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 |---|---|---|---|
 | Protected trunk: required checks, up to date, admins included | Trunk-based development | `scripts/setup-repo.sh`; conventions *Required checks* | Enforced |
 | Approval pinned to the exact commit | A later commit needs its own review | `review_gate.py`, `review.yml` (clean merges of `main` carry over) | Enforced |
-| Independent review: a fresh reviewer per PR, its own identity | A model reviewing a model shares its blind spots; an agent must not approve itself | `reviewer`; `REVIEWERS` in `review_gate.py`; `git-gate.py` (only the reviewer posts verdicts or uses `SDLC_REVIEWER_TOKEN`; the reviewer never commits) | Trial |
+| Independent review: a fresh reviewer per PR, its own identity | A model reviewing a model shares its blind spots; an agent must not approve itself | `reviewer`; `REVIEWERS` in `review_gate.py`; `git-gate.py` (only the reviewer posts verdicts, uses `SDLC_REVIEWER_TOKEN` or prints the environment; the reviewer never commits); `setup-repo.sh` trusts the reviewer login only, as the other agents post as the owner | Trial |
 | Briefs carry facts, not conclusions | An agent handed a hypothesis tends to confirm it | `dispatch` check *Facts, not conclusions*; review template; `reviewer` | Trial |
 | Bounded review: three rounds, then the owner | Endless rounds hide a disagreement | `reviewer` *The verdict*; `dispatch` (`owner-decision` label) | Guided |
 | Merge only when the checks pass; merge commits only | No merge around the gate | `git-gate.py` (`gh pr merge --auto` only); `setup-repo.sh` | Enforced |
@@ -161,9 +166,9 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | Practice | Why | Covered by | Status |
 |---|---|---|---|
 | A clear AI policy: roles, models, autonomy | DORA 2025: the first capability that makes AI pay off | `docs/sdlc.md` *Roles*; conventions *Who codes and reviews*; agents' `model` | Guided |
-| Instructions versioned and released | The written process is code | this plugin (`plugin.json` version); changes by PR | Enforced |
+| Instructions versioned and released | The written process is code | this plugin (`plugin.json` version, bumped by hand when a change should reach projects); changes by PR | Guided |
 | Each process change names the metric it should move | Instructions are evaluated, not judged by impression | conventions *How we work*; `dispatch` lead's routine; `docs/sdlc.md` | Trial |
-| Context budget per agent | Context is a hidden cost; recall drops as it grows | `context-size.py` (150k, 300k); `dispatch` (resume only under the warning) | Enforced |
+| Context budget per agent | Context is a hidden cost; recall drops as it grows | `context-size.py` (warns at 150k and 300k); `dispatch` (resume only under the warning) | Guided |
 | The lead reads reports, not diffs | The lead's context is the costliest | `dispatch` *Lead's routine*; `agent-rules.md` *Report* | Guided |
 | A cause on every must-fix | Rework measured by cause, by script | `reviewer` *The verdict*; conventions *Code quality bar* | Guided |
 | Escaped defects traced to their PR | Change failure rate | `fixer` (`Escaped from: #n`) | Guided |

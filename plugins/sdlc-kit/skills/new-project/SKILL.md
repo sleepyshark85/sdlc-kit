@@ -21,7 +21,9 @@ packs available are the folders in `${CLAUDE_PLUGIN_ROOT}/packs/`.
      `git init -b main && git add -A && git commit -m "Start from sdlc-kit" && gh repo create <owner>/<name> --private --source . --push`
    - create the reviewer's GitHub identity (a second account or a GitHub App), add it as a collaborator, and export
      its token as `SDLC_REVIEWER_TOKEN` in the environment Claude Code runs in;
-   - apply the settings: `bash scripts/setup-repo.sh <owner>/<name> <reviewer login> <the printed checks>`.
+   - apply the settings: `bash scripts/setup-repo.sh <owner>/<name> <reviewer login> <the printed checks>`. The
+     review gate then trusts the reviewer login only, as the other agents post as the owner; to approve by hand, the
+     owner posts with the reviewer identity.
 4. **Plan the first wave** with the `plan-wave` skill, on a `docs/` branch. Its first task is usually the walking
    skeleton: the component's solution or module, one test, and CI green.
 

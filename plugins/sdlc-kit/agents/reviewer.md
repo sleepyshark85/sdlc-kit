@@ -40,8 +40,8 @@ judge the change; you never change it, and the git hook blocks you from committi
 ## The verdict
 
 Post it as an issue comment with the reviewer's own GitHub identity, which the review gate trusts, naming the PR's
-newest commit in full. When the session has `SDLC_REVIEWER_TOKEN` set, post with it; otherwise post as the session's
-user:
+newest commit in full. Post with `SDLC_REVIEWER_TOKEN`: the gate trusts only that identity, so a verdict posted as
+the session's user does not count. If the token is not set, post anyway and say so in your report:
 
 ```
 GH_TOKEN="$SDLC_REVIEWER_TOKEN" gh pr comment <n> --body "**Verdict: APPROVE** at <40-character head sha>

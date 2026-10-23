@@ -8,7 +8,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <!-- Public items need a doc comment (CS1591); tests and samples turn it off in their own Directory.Build.props. -->
+    <!-- Public items need a doc comment (CS1591); .editorconfig turns it off for tests and samples. -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- Restores use packages.lock.json; CI restores in locked mode, so a resolved version never changes unseen. -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>

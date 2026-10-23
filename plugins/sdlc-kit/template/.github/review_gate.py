@@ -8,8 +8,9 @@ repository holding the head commit and `refs/remotes/origin/<base branch>`, and 
 never checks out or runs the pull request's code.
 
 A verdict is a comment starting "**Verdict:" by a trusted author; it names every commit whose full sha it contains. When
-the REVIEWERS environment variable lists logins (comma-separated), only those logins are trusted, so the reviewer
-agent's own identity and the owner's can approve and no other agent can; otherwise the owner, members and
+the REVIEWERS environment variable lists logins (comma-separated), only those logins are trusted: setup-repo.sh lists
+the reviewer agent's identity alone, since the other agents post as the owner, so no other agent can approve (an
+owner who approves by hand posts with the reviewer identity). Otherwise the owner, members and
 collaborators are. The newest verdict naming the head decides, and passes only as "**Verdict: APPROVE** at <head>".
 Without one, and only when the base is the default branch, an approval of an earlier commit A of the pull request
 carries over to the head when it is the newest verdict naming any of the pull request's commits, every commit after A
