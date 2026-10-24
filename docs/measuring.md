@@ -9,7 +9,6 @@ Status of each collector and metric:
 
 - **Exists:** the kit records it today.
 - **New:** to be built by the recording and scorecard PRs (see [Building it](#building-it)).
-- **Pending:** depends on a practice still in review (release flags, #4).
 
 ## Principles
 
@@ -33,13 +32,13 @@ Status of each collector and metric:
 | C2 | Verdict comments | Verdict, the head sha it names, author; each must-fix with its cause label and its `late`, `claim` or `withdrawn` marker; the owner's ruling on a round-3 PR. A round is counted from the order of verdicts | `gh api` issue comments, parsed by the format in `agents/reviewer.md` | Exists; the markers and the ruling New |
 | C3 | PR facts block | The facts only the author knows (below) | Written by the developer or fixer when it opens the PR; checked by the reviewer | New |
 | C4 | Git history | Commits, their authors and times, merge commits, `Conflicts:` trailers, when a line (a requirement ID, a decision) first appeared, test names | `git log`, `git blame`, `git show`, `git grep` | Exists; the trailer New |
-| C5 | The project's docs | Requirements, numbered criteria, open questions, traceability, plans and their `Reads:` lines, decisions, mutation floors, the flag registry | Parsed from Markdown tables (`REQUIREMENTS.md` or `docs/requirements/`, `docs/plan/`, `docs/decisions.md`, `docs/flags.md`) | Exists; flags Pending |
+| C5 | The project's docs | Requirements, numbered criteria, open questions, traceability, plans and their `Reads:` lines, decisions, mutation floors, the flag registry | Parsed from Markdown tables (`REQUIREMENTS.md` or `docs/requirements/`, `docs/plan/`, `docs/decisions.md`, `docs/flags.md`) | Exists |
 | C6 | Hook block log | Each action `git-gate.py` blocked: time, session, agent, rule. Never the command: it may hold a secret | One JSON line per block in `<session>/git-gate/<agent>.jsonl`, beside the transcripts, as `context-size.py` does | New |
 | C7 | Context-size log | Each agent's context size after each tool call; the warnings are derived from the hook's thresholds | `context-size.py` → `<session>/context-sizes/<agent>.jsonl` (time, agent type, tokens) | Exists |
 | C8 | Session transcripts | Tokens per call (input, output, cache read and write), turns and tool calls, per agent and role | The transcripts' `usage` fields and tool calls, under `~/.claude/projects/<project>/` | Exists |
 | C9 | CI runs | Each check's conclusion, duration and attempt; the mutation reports | `gh api` check runs and workflow runs; the `mutation-reports` artifact the .NET pack uploads | Exists |
 | C10 | Security alerts | Code scanning, Dependabot and secret scanning alerts: severity, opened, fixed; the OpenSSF Scorecard result | `gh api` alerts endpoints; the Scorecard workflow's SARIF | Exists |
-| C11 | Daily run on `main` | The full suite on `main` with default settings, and again with every in-progress flag on | A scheduled workflow (`daily.yml`) whose result is a check run on `main` | New; flags-on run Pending |
+| C11 | Daily run on `main` | The full suite on `main` with default settings, and again with every in-progress flag on | A scheduled workflow (`daily.yml`) whose result is a check run on `main` | New |
 | C12 | Escape records | `Escaped from: #n` and `Should have caught: <practice>` in a fix PR | C3's block, written by the fixer or developer | `Escaped from` Exists; the cause New |
 | C13 | Owner audit | Once per wave: a strict re-review of one random merged PR, its brief checked against `dispatch`'s brief checks, and the owner's own read of one PR in full, with the time it took | A reviewer dispatched by the lead on a merged PR; the owner records the findings and the time in the scorecard | New |
 | C14 | Code health | File and function sizes, duplication, analyzer suppressions, TODOs; tests that fake a type of the project itself; parsers and validators without a property or fuzz test; each test's duration | A pack-provided command that writes JSON, and the pack's test report uploaded like `mutation-reports` (the language decides how) | New |
@@ -95,7 +94,7 @@ goes the wrong way. [Coverage](#coverage-every-practice) says which practice eac
 | PL5 | Tasks added, split (the developer's "stop and split") or dropped after the plan merged | E | C4 (plan history), C3 | Many: the plan guessed. Look at which rule each change broke |
 | PL6 | Merge conflicts per wave, on docs and on code | E | C4 (`Conflicts:` trailers) | Rising: parallel tasks overlap. Split the hot file or serialize the tasks |
 | PL7 | Contracts another task builds against that landed after their first user, or without a contract test | A | C5, C3, C4 | Any: two tasks each invented their side of a seam |
-| PL8 | Feature waves that needed stacked PRs or a flag | E | C5, C1 | Rising: restructuring is not planned ahead of behaviour. Pending |
+| PL8 | Feature waves that needed stacked PRs or a flag | E | C5, C1 | Rising: restructuring is not planned ahead of behaviour |
 
 ### 3. Build: the developer's PR
 
@@ -109,7 +108,7 @@ goes the wrong way. [Coverage](#coverage-every-practice) says which practice eac
 | BU6 | Agents past the context warnings, by role | E | C7 | Rising: briefs or tasks too large, or agents resumed too long |
 | BU7 | PRs whose facts block says more than one kind, or a mechanical PR without its command | A | C3, C1 | Any: changes mixed in one PR |
 | BU8 | PR descriptions without the attribution line | A | C1 | Any: AI authorship hidden |
-| BU9 | Changed tests that fake something inside the project; tests over a second | A | C14, C9 | Any: tests check the fake, not the code |
+| BU9 | Changed tests that fake something inside the project; tests over a second | A | C14 | Any: tests check the fake, not the code |
 | BU10 | Parsers and validators without a property or fuzz test | A | C14 | Any: inputs no example covers |
 | BU11 | New tests that kill no mutant and pin no criterion | A | C9, C5 | Any: a test that costs time and checks nothing new |
 | BU12 | Golden files changed without the update flag in the PR, or without the reviewer noting the diff | A | C1, C2 | Any: a regression regenerated away |
@@ -150,7 +149,7 @@ goes the wrong way. [Coverage](#coverage-every-practice) says which practice eac
 | MN6 | Open security alerts by severity and age; time to fix; new per wave | E | C10 | Ageing high-severity alerts: schedule them as tasks |
 | MN7 | OpenSSF Scorecard score and its failing checks (token permissions, pinned dependencies, branch protection among them) | E | C10 | A drop: a setting or workflow regressed |
 | MN8 | Mutation score per package against its floor (weekly full run) | E | C9, C5 | Near the floor: tests are weakening |
-| MN9 | Flags past their removal task; flags open | A, E | C5 (`docs/flags.md`) | Any past removal: flag debt. Plan its removal now. Pending |
+| MN9 | Flags past their removal task; flags open | A, E | C5 (`docs/flags.md`) | Any past removal: flag debt. Plan its removal now |
 | MN10 | Code health trends: largest files and functions, duplication, suppressions, TODOs | E | C14 | A trend upward: the bar erodes between reviews |
 | MN11 | Merged PRs per wave by kind; features switched on | E | C1, C3 | Read with MN2 and MN4: throughput alone inflates with AI |
 | MN12 | Broken links found on `main`; workflow-rule failures | A | C9 | Any: a check that should have blocked the PR didn't run |
@@ -248,7 +247,9 @@ Each row of the README's table, with its adherence and effect metrics, or why it
 | The developer self-checks before review | BU2 | RV1 |
 | The code quality bar | RV2 (raised) | RV1; MN10; MN4 |
 | Least privilege for agents | BU4; AG4 | MN5 (`none` escapes caused by an agent's action) |
-| Unfinished work merges dark; one switch-on task releases it (with #4: off on `main`, release flags, old code reshaped first) | RV6; MN9 | MN1; PL8 |
+| Unfinished work merges but is off on `main`; one switch-on task releases it | RV6 | MN1 |
+| Release flags bounded: listed, off by default, one check point, removed within two waves of the switch-on | MN9 (past removal); RV2 (`[process]` must-fixes on flags) | MN1 (flags on); MN9 (open flags) |
+| Old code reshaped before the feature | PL8 | BU1; MG1 (for features touching old code) |
 | AI authorship visible, a person accountable | BU8 | None: accountability shows only when something escapes, and MN5 traces each escape to its PR |
 
 ### Security
@@ -337,5 +338,5 @@ scorecard folder, outside the repository and any agent's checkout (by default `~
 |---|---|---|
 | Recording | The PR facts block (C3) in the developer, fixer and reviewer definitions; `git-gate.py`'s block log (C6); the `Conflicts:` trailer (C4); `Should have caught:` (C12); the daily run on `main` (C11); the owner audit in the lead's routine (C13); the dispatch log hook (C15); the `claim` and `withdrawn` markers and the owner's ruling format (C2) | All but MN9, MN10 and those needing C14 |
 | Scorecard | `scorecard.py` (its readers include the repository settings, C16), its tests, and the scorecard page's template | Every metric above with data |
-| Release flags (#4) | `docs/flags.md` and the flags-on daily run | MN9, PL8, MN1 with flags on |
+| Release flags | Done (`docs/flags.md`); the flags-on daily run comes with Recording | MN9, PL8; MN1 with flags on after Recording |
 | Each pack | The code-health command and the test report (C14) | MN10, BU9, BU10 |
