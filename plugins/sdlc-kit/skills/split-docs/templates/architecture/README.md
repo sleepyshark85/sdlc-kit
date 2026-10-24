@@ -1,21 +1,17 @@
 # Architecture
 
 The concepts, subsystems, contracts and flows of the project, language-neutral, in [arc42](https://arc42.org)'s
-structure; the section numbers are arc42's. **No code, type, package or API names here.** This page is the index and
-the system-wide view; each subsystem has its own file, and the crosscutting concepts are in `concepts.md`. A change to
-a shared rule changes these pages first.
+structure; the section numbers are arc42's (arc42 by Gernot Starke and Peter Hruschka, CC BY-SA 4.0). **No code,
+type, package or API names here.** This page is the index and the system-wide view; each subsystem has its own file,
+and the crosscutting concepts are in `concepts.md`. A change to a shared rule changes these pages first.
 
 ## 1. Introduction and goals
 
-The top quality goals, each citing its quality requirement ID:
-
-| Goal | Requirement |
-|---|---|
-| {{…}} | {{SEC-01}} |
+- **Quality goals:** {{the top three, each citing its quality requirement ID}}
 
 ## 2. Constraints
 
-In the requirements, §7.
+In the requirements: `REQUIREMENTS.md` §1 *Constraints*, or `docs/requirements/README.md` §7 once they are split.
 
 ## 3. Context and scope
 
@@ -23,7 +19,8 @@ In the requirements, §7.
 
 ## 4. Solution strategy
 
-{{The few choices that shape everything else, each in a line, with its decision in `docs/decisions.md`.}}
+- **Strategy:** {{the few choices that shape everything else, each in a line, with its decision in
+  `docs/decisions.md`}}
 
 ## 5. Building blocks, level 1
 
@@ -56,8 +53,8 @@ In `docs/decisions.md`.
 
 ## 10. Quality requirements
 
-The quality requirements are in the requirements' `quality.md`. The scenarios below show how the architecture meets
-the goals in §1:
+The quality requirements are in `REQUIREMENTS.md` §3, or `docs/requirements/quality.md` once split. The scenarios
+below show how the architecture meets the goals in §1:
 
 | Scenario | Requirement | How the architecture meets it |
 |---|---|---|
@@ -71,4 +68,4 @@ the goals in §1:
 
 ## 12. Glossary
 
-In the requirements' `glossary.md`.
+In `REQUIREMENTS.md` §4, or `docs/requirements/glossary.md` once split.

@@ -4,9 +4,9 @@ The concepts, components, contracts and flows of {{project}}, language-neutral: 
 here.** Implementation detail lives in the code and its comments, and each language's design notes map these sections
 to their mechanisms. A change to a shared rule changes this page first; decisions are in `docs/decisions.md`.
 
-This is the short form of [arc42](https://arc42.org). When it passes a split trigger (`docs/conventions.md`, *Docs
-grow by splitting*), the `split-docs` skill moves it into the full structure under `docs/architecture/`, which adds
-the deployment view once something is deployed.
+This is the short form of [arc42](https://arc42.org) (by Gernot Starke and Peter Hruschka, CC BY-SA 4.0). When it
+passes a split trigger (`docs/conventions.md`, *Docs grow by splitting*), the `split-docs` skill moves it into the full
+structure under `docs/architecture/`, which adds the deployment view once something is deployed.
 
 ## 1. Context and goals
 

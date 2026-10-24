@@ -45,9 +45,9 @@ Each measurable, grouped by quality characteristic (security, reliability, perfo
 
 The domain's terms, used in this sense everywhere: in the docs, the code and the tests.
 
-| Term | Meaning |
-|---|---|
-| {{…}} | {{…}} |
+| Term | Meaning | Not to be confused with |
+|---|---|---|
+| {{…}} | {{…}} | {{…}} |
 
 ## 5. Open questions and assumptions
 

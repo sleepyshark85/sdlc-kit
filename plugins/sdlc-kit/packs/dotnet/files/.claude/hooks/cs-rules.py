@@ -14,15 +14,16 @@ DECLARATION = re.compile(
 
 def requirement_ids(root):
     """The requirement ID prefixes, such as AREA in AREA-01, from REQUIREMENTS.md and, once the requirements are split,
-    the files of docs/requirements/."""
-    text = ""
-    for path in [os.path.join(root, "REQUIREMENTS.md")] + glob.glob(os.path.join(root, "docs", "requirements", "*.md")):
-        try:
-            with open(path, encoding="utf-8") as file:
-                text += file.read() + "\n"
-        except OSError:
-            pass
-    prefixes = sorted(set(re.findall(r"^\| ([A-Z]{2,5})-\d+ \|", text, re.M)))
+    the files of docs/requirements/. A project without REQUIREMENTS.md (deleted by a split, or never written) is not an
+    error; any other file that can't be read is."""
+    paths = glob.glob(os.path.join(root, "docs", "requirements", "*.md"))
+    if os.path.isfile(os.path.join(root, "REQUIREMENTS.md")):
+        paths.append(os.path.join(root, "REQUIREMENTS.md"))
+    found = set()
+    for path in paths:
+        with open(path, encoding="utf-8") as file:
+            found.update(re.findall(r"^\| ([A-Z]{2,5})-\d+ \|", file.read(), re.M))
+    prefixes = sorted(found)
     return re.compile(r"\b(?:" + "|".join(prefixes) + r")-\d+\b") if prefixes else None
 
 

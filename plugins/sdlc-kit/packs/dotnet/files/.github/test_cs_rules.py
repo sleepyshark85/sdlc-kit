@@ -39,6 +39,23 @@ class RequirementIdsTest(unittest.TestCase):
         self.assertIsNotNone(ids.search("// API-01"))
         self.assertIsNotNone(ids.search("// SEC-02"))
 
+    def test_the_split_form_without_a_root_file_names_the_prefixes(self):
+        with tempfile.TemporaryDirectory() as root:
+            write(root, os.path.join("docs", "requirements", "api.md"), "| API-01 | When … |")
+            write(root, os.path.join("docs", "requirements", "orders.md"), "| ORD-01 | When … |\n")
+
+            ids = cs_rules.requirement_ids(root)
+
+        self.assertIsNotNone(ids.search("// API-01"))
+        self.assertIsNotNone(ids.search("// ORD-01"))
+
+    def test_an_unreadable_requirements_file_is_an_error_not_a_skipped_file(self):
+        with tempfile.TemporaryDirectory() as root:
+            os.makedirs(os.path.join(root, "docs", "requirements", "broken.md"))
+
+            with self.assertRaises(OSError):
+                cs_rules.requirement_ids(root)
+
     def test_no_requirements_means_no_check(self):
         with tempfile.TemporaryDirectory() as root:
             self.assertIsNone(cs_rules.requirement_ids(root))

@@ -7,18 +7,16 @@ builds it when is in `docs/plan/`; the decisions taken are in `docs/decisions.md
 
 ## 1. Vision and goals
 
-{{The problem it solves and the goals it is measured by, in a few lines.}}
+- **Goal:** {{the problem it solves, in one or two sentences}}
+- {{Each further goal it is measured by, a bullet each.}}
 
 ## 2. Stakeholders
 
-| Stakeholder | Expects |
-|---|---|
-| {{…}} | {{…}} |
+- **Users and stakeholders:** {{who uses it, who else has a stake, and what each expects}}
 
 ## 3. Scope and context
 
-- **In scope:** {{…}}
-- **Out of scope:** {{…}}
+- **In scope:** {{…}} · **Out of scope:** {{…}}
 - **Business context:** {{the people and systems it exchanges information with, and what they exchange}}
 
 ## 4. Functional requirements
@@ -41,9 +39,7 @@ In `quality.md`.
 
 ## 7. Constraints
 
-| Constraint | Why |
-|---|---|
-| {{…}} | {{…}} |
+- **Constraints:** {{what is fixed from outside: platform, regulation, deadline, an existing system}}
 
 ## 8. Glossary
 
@@ -57,6 +53,6 @@ Not used: the agents are the team, and `docs/plan/` holds the waves.
 
 A task that depends on an open question waits for its answer.
 
-| # | Risk, assumption or question | Owner's answer |
+| # | Question or assumption | Owner's answer |
 |---|---|---|
 | Q1 | {{…}} | {{open}} |

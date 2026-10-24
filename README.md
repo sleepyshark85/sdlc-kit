@@ -72,6 +72,7 @@ plugins/sdlc-kit/
       pack.toml                     what the pack registers: component, CodeQL language, Dependabot, hook, checks
       files/                        copied over the project: dotnet/ build files, docs/languages/dotnet.md,
                                     .NET and mutation workflows, the survivors summary, the C# file-rules hook
+                                    and its tests (.github/test_cs_rules.py)
 .github/workflows/                  the kit's own CI (kit.yml) and review gate (review.yml)
 .sdlc/checks.toml                   the kit follows its own git rules (branch prefixes; no components)
 ```

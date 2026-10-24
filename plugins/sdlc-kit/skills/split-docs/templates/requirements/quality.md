@@ -1,12 +1,13 @@
 # Quality requirements
 
-The quality requirements every area shares (req42 §6), each measurable, grouped by quality characteristic.
+The quality requirements every area shares (req42 §6), each measurable, grouped by quality characteristic
+(security, reliability, performance, observability…).
 
 ## Requirements
 
-| ID | Characteristic | Requirement | Acceptance criteria |
-|---|---|---|---|
-| {{SEC-01}} | {{Security}} | {{External input is validated at the boundary before use}} | {{.1 …}} |
+| ID | Requirement | Acceptance criteria |
+|---|---|---|
+| {{SEC-01}} | {{External input is validated at the boundary before use}} | {{.1 …}} |
 
 ## Traceability
 
