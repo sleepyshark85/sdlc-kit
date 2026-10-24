@@ -22,7 +22,11 @@ protection and the review gate are the server-side backstop.
 Checks come from `.sdlc/checks.toml`: before a commit that stages a component's code, its `before_commit` commands;
 before a push that changes the component, its `before_push` commands. Which paths a component owns is decided by the
 template's `.sdlc/sdlc_paths.py`, which CI's change detector shares. CI runs the same checks; these find a failure
-before the commit or push instead of after it."""
+before the commit or push instead of after it.
+
+Each block is logged beside the session's transcripts (<session>/git-gate/<agent>.jsonl: time, agent type and the
+rule's fixed key, such as force-push; never the reason or the command, which may hold a secret) for the agent-team
+report in docs/measuring.md. A log that can't be written never stops the block."""
 import importlib.util
 import json
 import os
@@ -31,6 +35,7 @@ import shlex
 import subprocess
 import sys
 import tomllib
+from datetime import datetime, timezone
 
 HOOKS = os.path.dirname(os.path.abspath(__file__))
 SDLC_PATHS = os.path.join(os.path.dirname(HOOKS), "template", ".sdlc", "sdlc_paths.py")
@@ -39,6 +44,8 @@ PREFIXES = ("feature/", "fix/", "refactor/", "docs/", "chore/", "test/")
 REVIEWER_TOKEN = "SDLC_REVIEWER_TOKEN"
 TOKEN_EXPANSION = re.compile(r"\$\{?" + REVIEWER_TOKEN + r"\b")
 VERDICT = "**Verdict:"
+BLOCK_LOG = "git-gate"
+MAIN = "main"
 
 SEPARATORS = set(";&|\n()")
 PUNCTUATION = "".join(sorted(SEPARATORS)) + "<>"
@@ -122,9 +129,31 @@ def git(cwd, *args):
     return run.stdout.strip() if run.returncode == 0 else ""
 
 
-def block(reason):
-    print(reason, file=sys.stderr)
-    sys.exit(2)
+class Blocked(Exception):
+    """A command the hook refuses: the rule it breaks, a fixed key, and the reason shown to the agent."""
+
+    def __init__(self, rule, reason):
+        super().__init__(reason)
+        self.rule = rule
+
+
+def block(rule, reason):
+    raise Blocked(rule, reason)
+
+
+def log_block(payload, rule):
+    """Appends the block's rule to the session's log; a payload without a transcript (not from Claude Code) logs
+    nothing. The time is written as context-size.py writes it."""
+    transcript = payload.get("transcript_path")
+    if not transcript:
+        return
+    agent = payload.get("agent_id") or MAIN
+    path = os.path.join(os.path.splitext(transcript)[0], BLOCK_LOG, f"{agent}.jsonl")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    entry = {"time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+             "agent_type": payload.get("agent_type") or MAIN, "rule": rule}
+    with open(path, "a", encoding="utf-8") as file:
+        file.write(json.dumps(entry) + "\n")
 
 
 def resolve(cwd, path):
@@ -145,7 +174,7 @@ def load_config(root):
     except FileNotFoundError:
         return None
     except tomllib.TOMLDecodeError as error:
-        block(f"Blocked: {sdlc_paths.CONFIG} does not parse ({error}); fix it first.")
+        block("config-parse", f"Blocked: {sdlc_paths.CONFIG} does not parse ({error}); fix it first.")
 
 
 def mark_heredocs(text, bodies):
@@ -424,7 +453,7 @@ class Line:
             # Unbalanced quotes: the shell will reject it too, but never let a commit on the default branch through.
             if re.search(r"\bgit\b[^\n]*\bcommit\b", text) and self.config(self.cwd) is not None \
                     and self.branch(self.cwd) == DEFAULT_BRANCH:
-                block(f"Blocked: never commit on {DEFAULT_BRANCH}. Create a branch first.")
+                block("commit-on-default", f"Blocked: never commit on {DEFAULT_BRANCH}. Create a branch first.")
             return
         for words, stdin in parsed:
             self.check_command(unwrap(words), stdin)
@@ -455,8 +484,8 @@ class Line:
         prints = (name == "env" or (name == "printenv" and (not args or REVIEWER_TOKEN in args))
                   or (name == "export" and args in ([], ["-p"])) or (name == "set" and not args) or lists_variables)
         if prints and not self.reviewer and self.opted_in:
-            block("Blocked: only the reviewer reads the environment that holds the reviewer's token; print the "
-                  "variables you need by name.")
+            block("token-environment", "Blocked: only the reviewer reads the environment that holds the reviewer's "
+                  "token; print the variables you need by name.")
 
     def check_gh(self, args):
         if not self.opted_in:
@@ -467,22 +496,24 @@ class Line:
         if args[:2] in GH_POSTS or writes:
             sent = sent_by(self.cwd, pairs, api)
             if sent.unreadable and not self.reviewer:
-                block(f"Blocked: the hook can't read this body ({', '.join(sent.unreadable)}), and only the reviewer "
-                      "posts verdicts. Pass a literal --body, or write the body to a file in its own command and pass "
-                      "--body-file <path>.")
+                block("unreadable-body", f"Blocked: the hook can't read this body ({', '.join(sent.unreadable)}), and "
+                      "only the reviewer posts verdicts. Pass a literal --body, or write the body to a file in its own "
+                      "command and pass --body-file <path>.")
             if any(VERDICT in text for text in sent.texts + args) and not self.reviewer:
-                block("Blocked: only the reviewer posts verdicts (docs/conventions.md, Who codes and reviews).")
+                block("verdict-not-reviewer",
+                      "Blocked: only the reviewer posts verdicts (docs/conventions.md, Who codes and reviews).")
         if args[:2] == ["pr", "merge"] and "--auto" not in args:
-            block("Blocked: merge with `gh pr merge --auto`, which waits for the required checks and the review gate.")
+            block("merge-without-auto",
+                  "Blocked: merge with `gh pr merge --auto`, which waits for the required checks and the review gate.")
         if args[:2] in (["repo", "edit"], ["repo", "delete"], ["repo", "rename"]):
-            block("Blocked: repository settings are the owner's; ask the owner.")
+            block("repository-settings", "Blocked: repository settings are the owner's; ask the owner.")
         if writes:
             endpoint = positional[0] if positional else ""
             mutation = endpoint == GRAPHQL_ENDPOINT and any(GUARDED_MUTATION.search(text)
                                                             for text in sent.texts + args)
             if GUARDED_ENDPOINT.match(endpoint) or mutation:
-                block("Blocked: branch protection, rulesets, repository settings, merges and branch refs are the "
-                      "owner's through the API; merge with `gh pr merge --auto`, or ask the owner.")
+                block("repository-api", "Blocked: branch protection, rulesets, repository settings, merges and branch "
+                      "refs are the owner's through the API; merge with `gh pr merge --auto`, or ask the owner.")
 
     def check_git(self, args):
         here = self.cwd
@@ -500,7 +531,7 @@ class Line:
         positional = [arg for arg in rest if not arg.startswith("-")]
 
         if verb in ("push", "commit") and self.reviewer:
-            block("Blocked: the reviewer judges a change and never commits or pushes it.")
+            block("reviewer-commits", "Blocked: the reviewer judges a change and never commits or pushes it.")
         if verb == "push":
             pushed = check_push(rest, branch)
             self.checks.append(lambda: before_push(here, pushed, config))
@@ -508,9 +539,9 @@ class Line:
             self.staging = True
         elif verb == "commit":
             if branch == DEFAULT_BRANCH:
-                block(f"Blocked: never commit on {DEFAULT_BRANCH}. Create a branch first.")
+                block("commit-on-default", f"Blocked: never commit on {DEFAULT_BRANCH}. Create a branch first.")
             if self.staging or commit_stages_files(rest):
-                block(COMMIT_STAGES)
+                block("commit-stages", COMMIT_STAGES)
             self.staged = git(here, "diff", "--cached", "--name-status")
             self.checks.append(lambda: before_commit(here, config))
 
@@ -526,7 +557,7 @@ class Line:
             prefixes = tuple(config.get("branch_prefixes", PREFIXES))
             # Resetting the local default branch to the remote's is normal; any other new branch needs a prefix.
             if new != DEFAULT_BRANCH and not new.startswith(prefixes):
-                block(f"Blocked: branch '{new}' needs one of the prefixes {', '.join(prefixes)}.")
+                block("branch-prefix", f"Blocked: branch '{new}' needs one of the prefixes {', '.join(prefixes)}.")
             if verb in ("switch", "checkout"):
                 self.branches[here] = new
 
@@ -547,10 +578,10 @@ def check(cwd, command, failure):
     try:
         run = subprocess.run(command, cwd=cwd, capture_output=True, text=True)
     except FileNotFoundError:
-        block(f"{failure}\n'{command[0]}' is not on PATH (README.md lists the prerequisites).")
+        block("check-missing", f"{failure}\n'{command[0]}' is not on PATH (README.md lists the prerequisites).")
     if run.returncode != 0:
         tail = "\n".join((run.stdout + run.stderr).strip().splitlines()[-30:])
-        block(f"{failure}\n{tail}")
+        block("check-failed", f"{failure}\n{tail}")
 
 
 def run_checks(root, components, step):
@@ -576,7 +607,7 @@ def before_commit(here, config):
             code += files
     partly = set(code) & set(git(here, "diff", "--name-only").splitlines())
     if partly:
-        block("Blocked: these staged files also have unstaged changes; stage or stash them first:\n"
+        block("partially-staged", "Blocked: these staged files also have unstaged changes; stage or stash them first:\n"
               + "\n".join(sorted(partly)))
     run_checks(root, touched, "before_commit")
 
@@ -596,21 +627,21 @@ def before_push(here, branch, config):
 def check_push(rest, branch):
     """The rules for a git push; returns the branch it pushes."""
     if "--all" in rest or "--mirror" in rest:
-        block(f"Blocked: pushing every branch pushes {DEFAULT_BRANCH} too. Push the branch itself.")
+        block("push-all", f"Blocked: pushing every branch pushes {DEFAULT_BRANCH} too. Push the branch itself.")
     if any(arg in ("-f", "--force", "--force-with-lease", "--force-if-includes") or arg.startswith("--force")
            for arg in rest):
-        block(FORCE_PUSH)
+        block("force-push", FORCE_PUSH)
     if "-d" in rest or "--delete" in rest:
-        block(BRANCH_DELETION)
+        block("branch-deletion", BRANCH_DELETION)
     refspecs = [arg for arg in rest if not arg.startswith("-")][1:]
     if any(spec.startswith("+") for spec in refspecs):
-        block(FORCE_PUSH)
+        block("force-push", FORCE_PUSH)
     if any(spec.startswith(":") for spec in refspecs):
-        block(BRANCH_DELETION)
+        block("branch-deletion", BRANCH_DELETION)
     targets = [spec.split(":")[-1] for spec in refspecs] or [branch]
     targets = [branch if target in ("HEAD", "@") else target.removeprefix("refs/heads/") for target in targets]
     if DEFAULT_BRANCH in targets:
-        block(f"Blocked: never push to {DEFAULT_BRANCH}. Push a branch and open a pull request.")
+        block("push-to-default", f"Blocked: never push to {DEFAULT_BRANCH}. Push a branch and open a pull request.")
     sources = [spec.split(":")[0] for spec in refspecs]
     return branch if not sources or sources[0] in ("", "HEAD", "@") else sources[0]
 
@@ -632,11 +663,20 @@ def main():
     payload = json.load(sys.stdin)
     text = payload.get("tool_input", {}).get("command", "")
     project = os.environ.get("CLAUDE_PROJECT_DIR")
-    line = Line(payload.get("cwd") or project or ".", payload.get("agent_type"), project)
-    if not line.reviewer and TOKEN_EXPANSION.search(text) and line.opted_in:
-        block("Blocked: only the reviewer uses the reviewer's token.")
-    line.evaluate(text)
-    line.finish()
+    try:
+        line = Line(payload.get("cwd") or project or ".", payload.get("agent_type"), project)
+        if not line.reviewer and TOKEN_EXPANSION.search(text) and line.opted_in:
+            block("token-use", "Blocked: only the reviewer uses the reviewer's token.")
+        line.evaluate(text)
+        line.finish()
+    except Blocked as blocked:
+        print(blocked, file=sys.stderr)
+        try:
+            log_block(payload, blocked.rule)
+        except OSError:
+            # The log only counts blocks: failing to write it must never turn a block into an allow.
+            pass
+        sys.exit(2)
 
 
 if __name__ == "__main__":
