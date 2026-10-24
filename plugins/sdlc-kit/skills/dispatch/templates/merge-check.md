@@ -7,8 +7,9 @@ design choice goes to `developer`.
 ```text
 Bring PR #{{n}} (branch `{{branch}}`) up to date with `origin/{{base}}`{{, now that #N it was stacked on has merged, or nothing}}.
 Merge `origin/{{base}}` into the branch; never rebase or force-push it. Resolve each conflict so both sides' changes
-survive; where a side's intent is unclear, stop and report the conflict instead. Change nothing else. Run the tests
-both sides' changes touch, then push.
+survive; where a side's intent is unclear, stop and report the conflict instead. If any file conflicted, add the
+trailer `Conflicts: <file>, <file>` to the merge commit's message, in its last paragraph with the other trailers; a
+clean merge has none. Change nothing else. Run the tests both sides' changes touch, then push.
 Scratch prefix: `{{prefix}}-`. No live calls.
 
 Put each conflict and how you resolved it in a PR comment. Report in the short format of agent-rules.md, with

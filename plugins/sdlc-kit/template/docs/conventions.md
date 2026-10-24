@@ -48,6 +48,35 @@ what the code must do.
   "none". The reviewer checks each against the requirements.
 - **A process change names its metric:** a PR that changes agents, skills, hooks or these conventions says which
   scorecard metric it should move, and the next scorecard keeps or reverts it.
+- **Every PR description ends with its facts block,** which the scorecard reads and GitHub renders as nothing. Each
+  line holds what only the author knows; the reviewer checks it against the diff, and a wrong or missing line is a
+  `[process]` must-fix. The block, with an example value on each line:
+
+  ```text
+  <!-- sdlc
+  task: W3-T2
+  kind: dark
+  planned: S
+  criteria: API-01.2, API-01.3
+  reads: docs/requirements/api.md; ARCHITECTURE §3
+  metric: rework rate
+  escaped-from: #41
+  should-have-caught: criteria
+  -->
+  ```
+
+  | Line | Holds |
+  |---|---|
+  | `task` | The plan's task, or `none` |
+  | `kind` | `dark`, `flagged`, `switch-on`, `technical`, `fix`, `docs` or `process` |
+  | `planned` | The plan's size, or `none` |
+  | `criteria` | The numbered criteria it delivers, or `none` |
+  | `reads` | What its developer read: the task's `Reads:` line |
+  | `metric` | A process change only: the metric it should move |
+  | `escaped-from` | A fix of merged code only: the PR that introduced the defect |
+  | `should-have-caught` | With `escaped-from`: `criteria`, `tests`, `mutation`, `review`, `design`, `threat-model` or `none` |
+
+- **A merge that resolves conflicts says which files:** its commit message ends with `Conflicts: <file>, <file>`.
 
 ## Required checks
 

@@ -184,7 +184,7 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | Context budget per agent | Context is a hidden cost; recall drops as it grows | `context-size.py` (warns at 150k and 300k); `dispatch` (resume only under the warning) | Guided |
 | The lead reads reports, not diffs | The lead's context is the costliest | `dispatch` *Lead's routine*; `agent-rules.md` *Report* | Guided |
 | A cause on every must-fix | Rework measured by cause, by script | `reviewer` *The verdict*; conventions *Code quality bar* | Guided |
-| Escaped defects traced to their PR | Change failure rate | `fixer` (`Escaped from: #n`) | Guided |
+| Escaped defects traced to their PR, with the guard that should have caught them | Change failure rate; which guard to change | the facts block's `escaped-from` and `should-have-caught` (conventions *How we work*); `fixer`; `reviewer` check 9 | Guided |
 | Scorecard: cost, flow, quality and people per wave | Throughput alone inflates with AI | [`docs/measuring.md`](docs/measuring.md) (the metrics and collectors); the conventions above; the collectors and the script are planned | Planned |
 | The agent team measured by role and model: activity, cost, quality | Choosing each role's model and instructions on evidence | [`docs/measuring.md`](docs/measuring.md#the-agent-team); the dispatch log and the script are planned | Planned |
 
