@@ -22,7 +22,8 @@ How .NET code is written here, on top of `docs/conventions.md`. The code lives i
 
 ## Tests
 
-- xUnit v3, one test project per library; test names carry the requirement ID (`API_01_rejects_an_empty_name`).
+- xUnit v3, one test project per library; test names carry the requirement ID, with the criterion's number where a
+  test checks one (`API_01_2_rejects_an_empty_name`).
 - Boundaries only are faked; a real database runs in a container (Testcontainers).
 - Property tests for parsers and validators (for example CsCheck), with the seed printed on failure.
 

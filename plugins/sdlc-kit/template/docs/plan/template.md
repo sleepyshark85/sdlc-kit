@@ -11,8 +11,10 @@ section per task, in delivery order.
 
 - **Delivers:** {{the user-facing or technical outcome}}
 - **Requirements:** {{IDs}}
-- **Acceptance criteria**, for this task, not the whole feature:
-  - {{criterion}} · edge states: {{empty, too large, cancelled, the dependency down…}}
+- **Reads:** {{the files and sections the developer reads, e.g. "REQUIREMENTS §2 API; ARCHITECTURE §3" or
+  "docs/requirements/api.md; docs/architecture/orders.md"}}
+- **Acceptance criteria:** {{the requirements' criteria this task delivers, by number: AREA-01.1, AREA-01.2}}
+  - {{only what this task adds of its own: how it stays dark, a contract test, a limit until a later task}}
 - **Contracts:** introduces {{…}}; uses {{…}}
 - **Invariants extended:** {{the property tests this task adds cases to, or none}}
 - **Kind:** {{dark (how it stays dark: not wired in, not public, behind the existing contract), switch-on, or

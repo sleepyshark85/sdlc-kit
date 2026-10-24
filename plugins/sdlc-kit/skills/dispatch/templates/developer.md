@@ -8,7 +8,7 @@ Build {{task id}}: {{the task's outcome, one line}}.
 Acceptance criteria and kind (dark, switch-on or technical): docs/plan/{{wave file}}, section {{task id}}.
 
 Branch `{{branch}}` from `origin/{{base}}`; open the PR against `{{base}}`{{, stacked on #N, or nothing}}.
-Read first: {{named sections, e.g. "REQUIREMENTS API-01…03; ARCHITECTURE §3, §5"}}.
+Read first: {{the task's Reads line from the plan, e.g. "REQUIREMENTS API-01…03; ARCHITECTURE §3, §5"}}.
 Your files: {{paths}}. Other agents own {{paths and who, or "nothing: no one else is working"}}.
 Scratch prefix: `{{prefix}}-`. Live API cap: {{"$X for the whole task" or "no live calls"}}.
 
