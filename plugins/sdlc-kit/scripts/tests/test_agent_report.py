@@ -16,6 +16,7 @@ SESSION = "s1"
 OPUS = "claude-opus-5-5"
 PRICES = {
     OPUS: {"input": 4, "cache_write_5m": 5, "cache_write_1h": 8, "cache_read": 0.2, "output": 20},
+    "claude-opus-5": {"input": 5, "cache_write_5m": 6.25, "cache_write_1h": 10, "cache_read": 0.5, "output": 25},
     "claude-haiku-4-5": {"input": 1, "cache_write_5m": 1.25, "cache_write_1h": 2, "cache_read": 0.1, "output": 5},
     "claude-haiku-5-5": {"input": 0.1, "cache_write_5m": 0.125, "cache_write_1h": 0.2, "cache_read": 0.01,
                          "output": 0.5, "long": {"over": 100000, "input": 0.5, "cache_write_5m": 0.625,
@@ -115,6 +116,25 @@ class AgentReportTest(unittest.TestCase):
         self.assertAlmostEqual(5, report.cost(response("claude-haiku-4-5-20251001", output=MILLION), PRICES, US_ONLY))
         self.assertIsNone(report.cost(response("claude-haiku-4-50", output=MILLION), PRICES, US_ONLY))
 
+    def test_a_model_whose_id_extends_another_takes_its_own_price(self):
+        for model in (OPUS, OPUS + "-20260101"):
+            with self.subTest(model=model):
+                self.assertAlmostEqual(20, report.cost(response(model, output=MILLION), PRICES, US_ONLY))
+        self.assertAlmostEqual(25, report.cost(response("claude-opus-5", output=MILLION), PRICES, US_ONLY))
+
+    def test_a_time_with_an_offset_is_read_in_utc(self):
+        self.assertEqual(report.parse_time("2026-10-24T10:00:00Z"), report.parse_time("2026-10-24T12:00:00+02:00"))
+
+    def test_an_entry_with_an_unreadable_time_is_skipped(self):
+        self.write(f"{SESSION}.jsonl", [assistant("m1", "yesterday", fresh=1),
+                                        assistant("m2", "2026-10-24T10:00:00Z", fresh=1)])
+        self.write(os.path.join(SESSION, "git-gate", "main.jsonl"),
+                   [{"time": "soon", "rule": "force-push"}, {"time": "2026-10-24T10:00:01Z", "rule": "force-push"}])
+
+        lead = self.agents()[(SESSION, "lead")]
+
+        self.assertEqual((1, 1), (len(lead.responses), lead.blocks))
+
     def test_us_only_routing_costs_its_multiplier_more(self):
         self.assertAlmostEqual(22, report.cost(response(output=MILLION, geo="us"), PRICES, US_ONLY))
 
@@ -194,12 +214,29 @@ class AgentReportTest(unittest.TestCase):
                 self.assertIn(row, text)
 
     def test_roles_are_listed_by_cost_highest_first(self):
-        self.write(f"{SESSION}.jsonl", [assistant("m1", "2026-10-24T10:00:00Z", output=1)])
-        self.subagent("a1", "sdlc-kit:developer", [assistant("d1", "2026-10-24T10:00:00Z", output=MILLION)])
+        self.write(f"{SESSION}.jsonl", [assistant("m1", "2026-10-24T10:00:00Z", output=MILLION)])
+        self.subagent("a1", "sdlc-kit:developer", [assistant("d1", "2026-10-24T10:00:00Z", output=1)])
 
         text = report.report(list(self.agents().values()), PRICES, US_ONLY)
 
-        self.assertLess(text.index("| developer | 1 |"), text.index("| lead | 1 |"))
+        per_dispatch = text[text.index("## Per dispatch"):]
+        self.assertLess(text.index("| lead | 1 |"), text.index("| developer | 1 |"))
+        self.assertLess(per_dispatch.index(f"| lead | {OPUS} |"), per_dispatch.index(f"| developer | {OPUS} |"))
+
+    def test_a_role_and_models_dispatches_show_their_median_and_largest(self):
+        self.write(f"{SESSION}.jsonl", [assistant("m1", "2026-10-24T10:00:00Z", fresh=1)])
+        tools = {"a1": [], "a2": ["Bash"], "a3": ["Bash", "Read", "Grep"]}
+        for agent_id, requests in (("a1", 1), ("a2", 2), ("a3", 4)):
+            entries = [assistant(f"{agent_id}-{n}", f"2026-10-24T10:{n * 10:02d}:00Z", output=MILLION)
+                       for n in range(requests)]
+            entries[0]["message"]["content"] = [tool_use(f"{agent_id}-t{i}", name)
+                                                for i, name in enumerate(tools[agent_id])]
+            self.subagent(agent_id, "sdlc-kit:developer", entries)
+
+        text = report.report(list(self.agents().values()), PRICES, US_ONLY)
+
+        self.assertIn(f"| developer | {OPUS} | 3 | 2 / 4 | 1 / 3 | 10 / 30 | $40.00 / $80.00 |", text)
+        self.assertIn("| developer | Bash 2, Read 1, Grep 1 |", text)
 
     def test_the_project_folder_is_named_after_the_project_path(self):
         with mock.patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": self.folder}):

@@ -97,6 +97,14 @@ def parse_time(text):
     return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
 
 
+def recorded_time(text):
+    """A time a session file records, or None when it records none it can read; such an entry is skipped."""
+    try:
+        return parse_time(text) if isinstance(text, str) else None
+    except ValueError:
+        return None
+
+
 def within(moment, since, until):
     return (since is None or moment >= since) and (until is None or moment < until)
 
@@ -135,10 +143,8 @@ def read_transcript(agent, path, since, until, seen):
     message and tool-call ids already counted in this run."""
     for entry in lines(path):
         message = entry.get("message")
-        if not isinstance(message, dict) or not entry.get("timestamp"):
-            continue
-        moment = parse_time(entry["timestamp"])
-        if not within(moment, since, until):
+        moment = recorded_time(entry.get("timestamp"))
+        if not isinstance(message, dict) or moment is None or not within(moment, since, until):
             continue
         if entry.get("type") == "assistant":
             key = message.get("id") or entry.get("requestId") or entry.get("uuid")
@@ -166,7 +172,8 @@ def role_of(agent_type):
 def count_blocks(folder, session, agent, since, until):
     name = git_gate.MAIN if agent.id == LEAD else agent.id
     log = os.path.join(folder, session, git_gate.BLOCK_LOG, f"{name}.jsonl")
-    return sum(1 for entry in lines(log) if entry.get("time") and within(parse_time(entry["time"]), since, until))
+    times = (recorded_time(entry.get("time")) for entry in lines(log))
+    return sum(1 for moment in times if moment is not None and within(moment, since, until))
 
 
 def session_agents(folder, session, since, until, seen):
@@ -274,42 +281,40 @@ def table(header, rows):
                      + ["| " + " | ".join(str(cell) for cell in row) + " |" for row in rows])
 
 
-def report(agents, prices, us_only_multiplier):
-    """The report's Markdown."""
-    by_agent, by_model, model_agents = priced(agents, prices, us_only_multiplier)
-    by_role = defaultdict(list)
-    for agent in agents:
-        by_role[agent.role].append(agent)
-
-    def group_cost(members):
-        return sum(by_agent[agent].cost for agent in members)
-
-    roles = sorted(by_role, key=lambda role: (-group_cost(by_role[role]), role))
-    limits = " / ".join(f"{limit // 1000}k" for limit in context_size.THRESHOLDS)
-    role_rows = []
-    for role in roles:
-        members = by_role[role]
-        total = Totals()
-        for agent in members:
-            total.absorb(by_agent[agent])
-        role_rows.append([
-            role, len(members), sum(agent.resumes for agent in members), total.requests,
+def role_row(role, members, by_agent):
+    """A role's row: its agents' activity summed, and how many passed each context warning."""
+    total = Totals()
+    for agent in members:
+        total.absorb(by_agent[agent])
+    return [role, len(members), sum(agent.resumes for agent in members), total.requests,
             sum(sum(agent.tools.values()) for agent in members), sum(agent.errors for agent in members),
             sum(agent.blocks for agent in members), f"{total.output:,}", f"{total.read_share():.0%}",
             f"{max(agent.peak() for agent in members):,}",
             " / ".join(str(sum(1 for agent in members if past(agent.peak(), limit)))
                        for limit in context_size.THRESHOLDS),
-            money(total.cost)])
-    dispatch_rows = []
-    groups = defaultdict(list)
+            money(total.cost)]
+
+
+def dispatch_row(role, model, members, by_agent):
+    """A role and model's spread per dispatch: the median and the largest agent."""
+    costs = [by_agent[agent].cost for agent in members]
+    return [role, model, len(members), spread([len(agent.responses) for agent in members]),
+            spread([sum(agent.tools.values()) for agent in members]), spread([agent.minutes() for agent in members]),
+            f"{money(median(costs))} / {money(max(costs))}"]
+
+
+def report(agents, prices, us_only_multiplier):
+    """The report's Markdown."""
+    by_agent, by_model, model_agents = priced(agents, prices, us_only_multiplier)
+    by_role, groups = defaultdict(list), defaultdict(list)
     for agent in agents:
+        by_role[agent.role].append(agent)
         groups[(agent.role, agent.model())].append(agent)
-    for (role, model), members in sorted(groups.items(), key=lambda item: (roles.index(item[0][0]), item[0][1])):
-        dispatch_rows.append([role, model, len(members), spread([len(agent.responses) for agent in members]),
-                              spread([sum(agent.tools.values()) for agent in members]),
-                              spread([agent.minutes() for agent in members]),
-                              f"{money(median(by_agent[agent].cost for agent in members))} / "
-                              f"{money(max(by_agent[agent].cost for agent in members))}"])
+    roles = sorted(by_role, key=lambda role: (-sum(by_agent[agent].cost for agent in by_role[role]), role))
+    limits = " / ".join(f"{limit // 1000}k" for limit in context_size.THRESHOLDS)
+    role_rows = [role_row(role, by_role[role], by_agent) for role in roles]
+    dispatch_rows = [dispatch_row(role, model, members, by_agent) for (role, model), members in
+                     sorted(groups.items(), key=lambda item: (roles.index(item[0][0]), item[0][1]))]
     parts = [
         "## By role",
         table(["Role", "Agents", "Resumes", "Requests", "Tool calls", "Tool errors", "Blocks", "Output tokens",
@@ -321,7 +326,7 @@ def report(agents, prices, us_only_multiplier):
                 money(totals.cost) + (f" (+{totals.unpriced} unpriced)" if totals.unpriced else "")]
                for model, totals in sorted(by_model.items(), key=lambda item: (-item[1].cost, item[0]))]),
         "## Per dispatch (median / max)",
-        table(["Role", "Model", "Dispatches", "Requests", "Tool calls", "Minutes", "Cost"], dispatch_rows),
+        table(["Role", "Model", "Agents", "Requests", "Tool calls", "Minutes", "Cost"], dispatch_rows),
         "## Tool mix",
         table(["Role", "Most used tools"],
               [[role, ", ".join(f"{name} {count}" for name, count in
