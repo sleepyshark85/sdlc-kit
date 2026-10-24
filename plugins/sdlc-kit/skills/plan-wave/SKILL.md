@@ -8,9 +8,12 @@ argument-hint: "[wave goal]"
 
 Goal: `$ARGUMENTS`. Small PRs come from small tasks decided here, never from splitting a finished feature.
 
-1. Read the requirements the wave covers (`REQUIREMENTS.md`) and the architecture sections they touch. List what the
-   requirements leave open and ask the owner before planning around a guess.
+1. Read the requirements the wave covers (`REQUIREMENTS.md`, or the index and area files of `docs/requirements/`)
+   and the architecture sections they touch (`ARCHITECTURE.md`, or `docs/architecture/`). List what the requirements
+   leave open, and their open questions, and ask the owner before planning around a guess.
 2. Decompose into tasks with the rules below, and write `docs/plan/wave-<n>.md` from `docs/plan/template.md`.
+   **Check the split triggers** (`docs/conventions.md`, *Docs grow by splitting*): if a document passes one, or would
+   once the wave's tasks land, split it with the `split-docs` skill first, in its own PR, and cite the new files.
 3. Check the plan against the [decomposition checklist](#decomposition-checklist).
 4. Open the plan's PR (`docs/plan-wave-<n>`) and dispatch a reviewer on it, briefed with the checklist. No task
    starts before the plan merges.
@@ -27,8 +30,11 @@ Goal: `$ARGUMENTS`. Small PRs come from small tasks decided here, never from spl
   contract test are a task of their own, and land first.
 - **Invariants are not tasks.** A property test or a bound (no write before its audit entry, at most N concurrent
   runs) starts with the first task that builds the mechanism, and each later task extends it.
-- **Acceptance criteria are written for the task,** not copied from the feature, each with its edge states (empty,
-  too large, cancelled, the dependency down).
+- **Acceptance criteria are cited, not copied:** a task lists the requirements' numbered criteria it delivers
+  (`AREA-01.2`), so their text lives in one place. A criterion too large for one task is split in the requirements
+  first, by PR, into numbered criteria of its own. The task adds only what is its own: how it stays dark, a contract
+  test, a limit until a later task.
+- **Each task names what to read:** the files and sections its developer needs (`Reads:`), never a whole document.
 - **Size:** S under about 150 changed production lines, M under about 400. An L is split. Tests are counted apart and
   stay in the same task as the code they cover.
 - **Detail goes into boundaries, not internals:** contracts and criteria are exact; class structure is left to the
@@ -60,11 +66,12 @@ a plain setting read once at startup is allowed, with a removal task in the plan
 
 - [ ] Each task is deliverable alone, and dark, switch-on or technical.
 - [ ] Each task holds one behaviour or one contract, and its expected size is S or M.
-- [ ] Each acceptance criterion belongs to exactly one task, with its edge states.
+- [ ] Each numbered criterion of the wave's requirements is cited by exactly one task, edge states included.
+- [ ] Each task's `Reads:` names files and sections, never a whole document.
 - [ ] Each contract another task builds against lands first, with its contract test.
 - [ ] Each invariant names the task that starts it.
 - [ ] The order works: no task needs one that comes after it.
-- [ ] Parallel tasks share no file.
+- [ ] Parallel tasks share no file, docs included.
 - [ ] Each feature has exactly one switch-on task.
 
 ## Example

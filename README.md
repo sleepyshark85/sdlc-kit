@@ -36,6 +36,7 @@ plugins/sdlc-kit/
     dispatch/                       the lead's briefs (developer, fix, review, merge-check), agent rules, lead's routine
     plan-wave/                      tasks of one behaviour or contract, dark or switch-on, decomposition checklist
     new-project/                    scaffolds a project and walks the owner through their steps
+    split-docs/                     grows the short requirements or architecture into full req42 or arc42 (templates/)
   hooks/
     hooks.json                      wires the two hooks into every session that has the plugin
     git-gate.py                     git and GitHub rules, and the project's checks before a commit and a push,
@@ -48,10 +49,10 @@ plugins/sdlc-kit/
   template/                         copied into a new project
     CLAUDE.md                       the project's working notes; imports the conventions
     README.md                       the project's readme skeleton
-    REQUIREMENTS.md                 requirements with IDs and testable criteria, decisions
-    ARCHITECTURE.md                 components, contracts, flows, runtime model, threat model; no code
-    docs/conventions.md             how we work, required checks, tests, the code quality bar, design rules
-    docs/decisions.md               platform decisions, dependencies, required checks, mutation floors
+    REQUIREMENTS.md                 short req42: requirements with IDs and EARS criteria, quality, glossary, questions
+    ARCHITECTURE.md                 short arc42: components, contracts, flows, runtime and threat model; no code
+    docs/conventions.md             how we work (split triggers included), required checks, tests, the bar, design rules
+    docs/decisions.md               design and platform decisions, dependencies, required checks, mutation floors
     docs/traceability.md            requirement → tests
     docs/plan/template.md           a wave's plan: one section per task
     .sdlc/checks.toml               components, their paths and checks (read by the hook and changes.py)
@@ -91,8 +92,10 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | Practice | Why | Covered by | Status |
 |---|---|---|---|
 | Spec before code, reviewed like code | Spec-driven development (GitHub Spec Kit, Kiro): the spec is what agents build from | `template/REQUIREMENTS.md`, `template/ARCHITECTURE.md`; conventions *How we work* (docs through PRs); `new-project` step 2 | Guided |
-| Structured, testable requirements with edge states | EARS, Given/When/Then: each criterion maps to a test | `template/REQUIREMENTS.md` §2 | Guided |
-| Traceability: every requirement has an ID, every test names it | A requirement without a test shows up | conventions *Tests*; `template/docs/traceability.md`; `developer` step 5 | Guided |
+| Structured, testable requirements with edge states | EARS: each criterion maps to a test | `template/REQUIREMENTS.md` §2; `split-docs` area template | Guided |
+| Criteria numbered once, cited by tasks | A criterion restated in a plan drifts from its requirement, and coverage can't be checked | `template/REQUIREMENTS.md` §2 (`AREA-01.2`); `plan-wave` *Tasks* and checklist; `template/docs/plan/template.md` (`Reads:`) | Trial |
+| Docs sized to the project: short forms, split by trigger into req42 and arc42 | A long single spec costs every agent context, and parallel tasks collide on it | `template/REQUIREMENTS.md`, `template/ARCHITECTURE.md` (short forms); conventions *Docs grow by splitting*; `split-docs`; `plan-wave` step 2; `cs-rules.py` reads both forms | Trial |
+| Traceability: every requirement has an ID, every test names it | A requirement without a test shows up | conventions *Tests*; `template/docs/traceability.md` (each area file's section once split); `developer` step 5 | Guided |
 | Ambiguity surfaced, not filled | Agents fill gaps silently and plausibly | *Assumptions* section: `developer` step 8, `reviewer` check 3, conventions; `plan-wave` step 1 | Trial |
 | Small, deliverable tasks of one behaviour or contract | Small batches (DORA); review cost grows faster than size | `plan-wave` *Tasks*; `template/docs/plan/template.md`; `dispatch` check *The task*; `developer` step 4 (stop and split) | Trial |
 | The plan's decomposition reviewed before building | Shared criteria left unowned when a feature is split late | `plan-wave` steps 3–4 and *Decomposition checklist* | Trial |
@@ -101,11 +104,11 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 
 | Practice | Why | Covered by | Status |
 |---|---|---|---|
-| Decision records | Decisions outlive the people and sessions that made them | `template/REQUIREMENTS.md` §4, `template/docs/decisions.md` | Guided |
-| Language-neutral architecture (concepts, contracts, flows) | One design, any implementation; code-level views drift | `template/ARCHITECTURE.md`; conventions *Short docs*; `reviewer` check 8 | Guided |
+| Decision records | Decisions outlive the people and sessions that made them | `template/docs/decisions.md` (arc42 §9), the one place for them | Guided |
+| Language-neutral architecture (concepts, contracts, flows) | One design, any implementation; code-level views drift | `template/ARCHITECTURE.md` (arc42); conventions *Short docs*; `reviewer` check 8 | Guided |
 | Contract first at task seams | Parallel agents each invent their side of a seam | `plan-wave` *Contract first*; `template/ARCHITECTURE.md` §3 | Guided |
 | Fitness functions: architecture rules as tests | A design rule erodes silently without a check | `template/ARCHITECTURE.md` §2 (a dependency test); .NET pack: `PublicApiAnalyzers` | Guided |
-| Threat model, LLM threats included | OWASP Top 10 for LLM Applications, OWASP agentic guidance | `template/ARCHITECTURE.md` §6; `reviewer` check 5 | Guided |
+| Threat model, LLM threats included | OWASP Top 10 for LLM Applications, OWASP agentic guidance | `template/ARCHITECTURE.md` §6 (full form: `concepts.md` §8.2); `reviewer` check 5 | Guided |
 
 ### 3. Coding
 

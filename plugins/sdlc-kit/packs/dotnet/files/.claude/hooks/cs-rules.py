@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """After an edit to a .cs file: one top-level type per file, named after it, and no requirement IDs in comments, as
 docs/languages/dotnet.md asks. A breach is reported to Claude to fix; the edit itself has already happened."""
+import glob
 import json
 import os
 import re
@@ -12,12 +13,15 @@ DECLARATION = re.compile(
 
 
 def requirement_ids(root):
-    """The requirement ID prefixes, such as AREA in AREA-01, from REQUIREMENTS.md."""
-    try:
-        with open(os.path.join(root, "REQUIREMENTS.md"), encoding="utf-8") as file:
-            text = file.read()
-    except OSError:
-        return None
+    """The requirement ID prefixes, such as AREA in AREA-01, from REQUIREMENTS.md and, once the requirements are split,
+    the files of docs/requirements/."""
+    text = ""
+    for path in [os.path.join(root, "REQUIREMENTS.md")] + glob.glob(os.path.join(root, "docs", "requirements", "*.md")):
+        try:
+            with open(path, encoding="utf-8") as file:
+                text += file.read() + "\n"
+        except OSError:
+            pass
     prefixes = sorted(set(re.findall(r"^\| ([A-Z]{2,5})-\d+ \|", text, re.M)))
     return re.compile(r"\b(?:" + "|".join(prefixes) + r")-\d+\b") if prefixes else None
 
@@ -59,4 +63,5 @@ def main():
         sys.exit(2)
 
 
-main()
+if __name__ == "__main__":
+    main()
