@@ -349,6 +349,30 @@ class GitVersionTest(unittest.TestCase):
         self.assertFalse(self.gate.too_old("git version 2.47.1 (Apple Git-154)"))
         self.assertFalse(self.gate.too_old("git version 3.0.0"))
 
+    def test_an_unreadable_version_counts_as_too_old(self):
+        self.assertTrue(self.gate.too_old(""))
+        self.assertTrue(self.gate.too_old("git version unknown"))
+
+    def test_the_gate_refuses_a_git_too_old_before_reading_anything(self):
+        with (mock.patch.object(self.gate, "git", return_value="git version 2.31.1\n"),
+              mock.patch.object(self.gate, "decide") as decide,
+              mock.patch("sys.argv", ["review_gate.py", "0" * 40, "main", "main"]),
+              self.assertRaises(SystemExit) as stopped):
+            self.gate.main()
+        self.assertEqual("The review gate needs Git 2.39 or later; `git version` says: git version 2.31.1",
+                         stopped.exception.code)
+        decide.assert_not_called()
+
+    def test_the_gate_decides_on_a_git_new_enough(self):
+        with (mock.patch.object(self.gate, "git", return_value="git version 2.39.0\n"),
+              mock.patch.object(self.gate, "decide", return_value=("pending", "waiting")) as decide,
+              mock.patch("sys.argv", ["review_gate.py", "0" * 40, "main", "main"]),
+              mock.patch("sys.stdin", io.StringIO("[]")),
+              contextlib.redirect_stdout(io.StringIO()) as output):
+            self.gate.main()
+        decide.assert_called_once()
+        self.assertEqual("pending\twaiting\n", output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

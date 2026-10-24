@@ -116,15 +116,15 @@ def patch_id(merge_base, commit):
 
 
 def too_old(version):
-    """Whether `git version`'s output names a Git older than OLDEST_GIT."""
+    """Whether `git version`'s output names a Git older than OLDEST_GIT, or names no version the gate can read."""
     found = re.search(r"(\d+)\.(\d+)", version)
-    return found is not None and (int(found.group(1)), int(found.group(2))) < OLDEST_GIT
+    return found is None or (int(found.group(1)), int(found.group(2))) < OLDEST_GIT
 
 
 def main():
     version = git("version").strip()
     if too_old(version):
-        sys.exit(f"{version} is too old: the review gate needs Git {'.'.join(map(str, OLDEST_GIT))} or later.")
+        sys.exit(f"The review gate needs Git {'.'.join(map(str, OLDEST_GIT))} or later; `git version` says: {version}")
     head, base, default_branch = sys.argv[1:]
     reviewers = frozenset(login.strip() for login in os.environ.get("REVIEWERS", "").split(",") if login.strip())
     state, description = decide(json.load(sys.stdin), head, base, default_branch, reviewers)
