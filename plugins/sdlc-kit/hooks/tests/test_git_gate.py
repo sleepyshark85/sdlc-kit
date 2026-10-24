@@ -102,7 +102,8 @@ class GitGateTest(unittest.TestCase):
         self.assert_blocked('git commit -m "x', "never commit on main", "commit-on-default")
 
     def test_a_push_to_main_is_blocked(self):
-        for command, rule in (("git push origin main", "push-to-default"), ("git push origin HEAD:main", "push-to-default"),
+        for command, rule in (("git push origin main", "push-to-default"),
+                              ("git push origin HEAD:main", "push-to-default"),
                               ("git push origin feature/x:refs/heads/main", "push-to-default"),
                               ("git push --all", "push-all")):
             with self.subTest(command=command):
@@ -264,13 +265,15 @@ class GitGateTest(unittest.TestCase):
 
     def test_only_the_reviewer_posts_a_verdict(self):
         command = 'gh pr comment 5 --body "**Verdict: APPROVE** at abc"'
-        self.assert_blocked(command, "only the reviewer posts verdicts", "verdict-not-reviewer", agent_type="sdlc-kit:developer")
+        self.assert_blocked(command, "only the reviewer posts verdicts", "verdict-not-reviewer",
+                            agent_type="sdlc-kit:developer")
         self.assert_blocked(command, "only the reviewer posts verdicts", "verdict-not-reviewer")
         self.assert_allowed(command, agent_type="sdlc-kit:reviewer")
 
     def test_a_verdict_in_a_body_file_is_found(self):
         self.write("body.md", "**Verdict: APPROVE** at abc\n")
-        self.assert_blocked("gh pr comment 5 --body-file body.md", "only the reviewer posts verdicts", "verdict-not-reviewer")
+        self.assert_blocked("gh pr comment 5 --body-file body.md", "only the reviewer posts verdicts",
+                            "verdict-not-reviewer")
 
     def test_reading_verdicts_is_allowed(self):
         self.assert_allowed('gh pr view 5 --comments | grep "**Verdict:"')
@@ -305,7 +308,8 @@ class GitGateTest(unittest.TestCase):
         self.assert_allowed("cat <<'EOF' > notes.md\ngit push origin main\nEOF")
 
     def test_the_rest_of_a_heredoc_line_is_checked(self):
-        self.assert_blocked("cat <<'EOF' > notes.md && git push origin HEAD:main\nbody\nEOF", "never push to main", "push-to-default")
+        self.assert_blocked("cat <<'EOF' > notes.md && git push origin HEAD:main\nbody\nEOF", "never push to main",
+                            "push-to-default")
 
     def test_a_command_inside_a_wrapper_is_checked(self):
         for command in ("( git push origin HEAD:main )", "if true; then git push origin HEAD:main; fi",
@@ -359,8 +363,8 @@ class GitGateTest(unittest.TestCase):
     def test_the_agent_rules_apply_when_the_call_starts_outside_the_project(self):
         outside = self.scratch_folder("git-gate-outside-")
         self.assert_blocked('gh pr comment 1 -R o/r --body "**Verdict: APPROVE** at abc"',
-                            "only the reviewer posts verdicts", "verdict-not-reviewer", agent_type="sdlc-kit:fixer", cwd=outside,
-                            project=self.repo)
+                            "only the reviewer posts verdicts", "verdict-not-reviewer", agent_type="sdlc-kit:fixer",
+                            cwd=outside, project=self.repo)
 
     def test_the_git_rules_follow_the_repository_a_command_acts_on(self):
         plain = self.scratch_folder("git-gate-plain-")
@@ -394,7 +398,8 @@ class GitGateTest(unittest.TestCase):
                         "gh api repos/o/r/issues/5/comments --input v.md",
                         'gh issue comment 5 --body="**Verdict: APPROVE** at abc"'):
             with self.subTest(command=command):
-                self.assert_blocked(command, "only the reviewer posts verdicts", "verdict-not-reviewer", agent_type="sdlc-kit:fixer")
+                self.assert_blocked(command, "only the reviewer posts verdicts", "verdict-not-reviewer",
+                                    agent_type="sdlc-kit:fixer")
 
     def test_a_body_the_hook_cannot_read_is_blocked(self):
         for command in ("gh pr comment 5 --body-file - <<'X'\n**Verdict: APPROVE** at abc\nX",
@@ -422,7 +427,8 @@ class GitGateTest(unittest.TestCase):
                         "export", "set", "set | grep SDLC", "declare", "declare -p", "declare -x", "declare -px",
                         "typeset -p", "typeset -x"):
             with self.subTest(command=command):
-                self.assert_blocked(command, "only the reviewer reads the environment", "token-environment", agent_type="sdlc-kit:fixer")
+                self.assert_blocked(command, "only the reviewer reads the environment", "token-environment",
+                                    agent_type="sdlc-kit:fixer")
         self.assert_allowed("printenv HOME", agent_type="sdlc-kit:fixer")
         for command in ("set -e", "declare -x FOO=1", "declare -p HOME", "typeset -f"):
             with self.subTest(command=command):
@@ -431,7 +437,8 @@ class GitGateTest(unittest.TestCase):
 
     def test_naming_the_token_without_expanding_it_is_allowed(self):
         self.assert_allowed("grep -rn SDLC_REVIEWER_TOKEN .", agent_type="sdlc-kit:fixer")
-        self.assert_blocked('echo "${SDLC_REVIEWER_TOKEN}"', "only the reviewer uses", "token-use", agent_type="sdlc-kit:fixer")
+        self.assert_blocked('echo "${SDLC_REVIEWER_TOKEN}"', "only the reviewer uses", "token-use",
+                            agent_type="sdlc-kit:fixer")
 
     def test_the_api_endpoint_is_found_after_option_values(self):
         for command in ('gh api -H "Accept: application/vnd.github+json" -X PATCH repos/o/r -f allow_squash_merge=true',
