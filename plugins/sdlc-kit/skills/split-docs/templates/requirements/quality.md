@@ -1,3 +1,4 @@
+<!-- Structure after req42 (https://req42.de). -->
 # Quality requirements
 
 The quality requirements every area shares (req42 §6), each measurable, grouped by quality characteristic

@@ -1,0 +1,9 @@
+sdlc-kit
+Copyright 2026 Trung Le
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The architecture templates (plugins/sdlc-kit/template/ARCHITECTURE.md and
+plugins/sdlc-kit/skills/split-docs/templates/architecture/) are adapted from arc42 (https://arc42.org),
+© Dr. Peter Hruschka, Dr. Gernot Starke and contributors, and are licensed under Creative Commons
+Attribution-ShareAlike 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). The requirements templates follow the
+structure of req42 (https://req42.de).

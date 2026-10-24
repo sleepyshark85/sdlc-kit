@@ -28,6 +28,7 @@ pack's tools (the .NET SDK for `dotnet`).
 
 ```text
 .claude-plugin/marketplace.json     the marketplace: this repository serves the plugin below
+LICENSE, NOTICE                     Apache-2.0, and the attribution to keep (arc42-based templates: CC BY-SA 4.0)
 docs/sdlc.md                        the SDLC: premise, roles, flow, guards, measures, how the process changes
 docs/measuring.md                   every metric by phase and practice, its collector, and what it tells
 plugins/sdlc-kit/
@@ -52,7 +53,8 @@ plugins/sdlc-kit/
     tests/
   template/                         copied into a new project
     CLAUDE.md                       the project's working notes; imports the conventions
-    README.md                       the project's readme skeleton
+    README.md                       the project's readme skeleton, with its "Built with sdlc-kit" line
+    NOTICE, .sdlc/LICENSE           the kit's attribution and licence, carried by every project
     REQUIREMENTS.md                 short req42: requirements with IDs and EARS criteria, quality, glossary, questions
     ARCHITECTURE.md                 short arc42: components, contracts, flows, runtime and threat model; no code
     docs/conventions.md             how we work (split triggers included), required checks, tests, the bar, design rules
@@ -201,6 +203,17 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 - **More packs:** Go and Ruby (from Officina's implementations), with their mutation tools.
 - **Releases:** semantic versions, API compatibility checks, SBOM and provenance, per pack.
 - **An `llm` pack:** evals, generative-AI telemetry conventions, injection tests, model changes as releases.
+
+## Licence
+
+The kit is licensed under the [Apache License 2.0](LICENSE); keep its [`NOTICE`](NOTICE) when you redistribute it or
+work derived from it. A project scaffolded from the template carries its own `NOTICE` and a "Built with sdlc-kit" line
+in its README; please keep them, as they are how others find the kit.
+
+The architecture templates (`template/ARCHITECTURE.md`, `skills/split-docs/templates/architecture/`) are adapted from
+[arc42](https://arc42.org) by Gernot Starke and Peter Hruschka and stay under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); what a project writes into them is its own. The
+requirements templates follow [req42](https://req42.de)'s structure.
 
 ## Developing the kit
 
