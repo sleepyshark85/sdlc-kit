@@ -42,6 +42,7 @@ plugins/sdlc-kit/
     plan-wave/                      tasks of one behaviour or contract (dark, flagged, switch-on, technical), checklist
     new-project/                    scaffolds a project and walks the owner through their steps
     split-docs/                     grows the short requirements or architecture into full req42 or arc42 (templates/)
+    team-report/                    the agent team's activity and cost by role and model, for the owner
   hooks/
     hooks.json                      wires the two hooks into every session that has the plugin
     git-gate.py                     git and GitHub rules, and the project's checks before a commit and a push,
@@ -50,6 +51,7 @@ plugins/sdlc-kit/
     tests/
   scripts/
     new_project.py                  creates a project from the template; adds packs
+    agent_report.py, prices.json    reads the session files: the agent team by role and model; the price table
     tests/
   template/                         copied into a new project
     CLAUDE.md                       the project's working notes; imports the conventions
@@ -186,7 +188,7 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | A cause on every must-fix | Rework measured by cause, by script | `reviewer` *The verdict*; conventions *Code quality bar* | Guided |
 | Escaped defects traced to their PR | Change failure rate | `fixer` (`Escaped from: #n`) | Guided |
 | Scorecard: cost, flow, quality and people per wave | Throughput alone inflates with AI | [`docs/measuring.md`](docs/measuring.md) (the metrics and collectors); the conventions above; the collectors and the script are planned | Planned |
-| The agent team measured by role and model: activity, cost, quality | Choosing each role's model and instructions on evidence | [`docs/measuring.md`](docs/measuring.md#the-agent-team); the dispatch log and the script are planned | Planned |
+| The agent team measured by role and model: activity, cost, quality | Choosing each role's model and instructions on evidence | [`docs/measuring.md`](docs/measuring.md#the-agent-team); `team-report` skill and `scripts/agent_report.py` (activity and cost: AG1, AG2, AG4, AG5, AG7, AG8); quality by role comes with the scorecard | Reported (activity, cost); Planned (quality) |
 
 ### 8. Products that run a model
 
@@ -211,7 +213,7 @@ work derived from it. A project scaffolded from the template carries its own `NO
 in its README; please keep them, as they are how others find the kit.
 
 The architecture templates (`template/ARCHITECTURE.md`, `skills/split-docs/templates/architecture/`) are adapted from
-[arc42](https://arc42.org) by Gernot Starke and Peter Hruschka and stay under
+[arc42](https://arc42.org), © Dr. Peter Hruschka, Dr. Gernot Starke and contributors, and stay under
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); what a project writes into them is its own. The
 requirements templates follow [req42](https://req42.de)'s structure.
 

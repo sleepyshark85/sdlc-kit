@@ -42,7 +42,7 @@ Status of each collector and metric:
 | C12 | Escape records | `Escaped from: #n` and `Should have caught: <practice>` in a fix PR | C3's block, written by the fixer or developer | `Escaped from` Exists; the cause New |
 | C13 | Owner audit | Once per wave: a strict re-review of one random merged PR, its brief checked against `dispatch`'s brief checks, and the owner's own read of one PR in full, with the time it took | A reviewer dispatched by the lead on a merged PR; the owner records the findings and the time in the scorecard | New |
 | C14 | Code health | File and function sizes, duplication, analyzer suppressions, TODOs; tests that fake a type of the project itself; parsers and validators without a property or fuzz test; each test's duration | A pack-provided command that writes JSON, and the pack's test report uploaded like `mutation-reports` (the language decides how) | New |
-| C15 | Dispatch log | Each agent the lead starts or resumes: time, agent id, role (agent type), model, the whole brief, and the agent's report when it returns (its outcome and `Live spend:` line) | A plugin hook after the Agent tool, appending one JSON line to `<session>/dispatches.jsonl`, beside the transcripts; read locally, never published | New |
+| C15 | Dispatch log | Each agent the lead starts or resumes: time, agent id, role (agent type), model, the whole brief, and the agent's report when it returns (its outcome and `Live spend:` line) | Read from the session files, no hook needed: the lead's transcript holds each Agent call (brief, resolved model, agent id) and each SendMessage resume; each subagent's `.meta.json` holds its type and description, and its transcript its report. `scripts/agent_report.py` reads them locally, never published | Exists |
 | C16 | Repository settings | Branch protection or rulesets on `main` (required checks, up to date, admins), merge settings, `security_and_analysis` (secret scanning, push protection) | `gh api` repository, branch protection and rulesets endpoints | New |
 
 ### The PR facts block
@@ -169,7 +169,8 @@ goes the wrong way. [Coverage](#coverage-every-practice) says which practice eac
 The same data, cut by **agent role** (lead, developer, fixer, reviewer) and by **model**, to see how the team
 works, what each role costs and how good its output is. The dispatch log (C15) ties each agent to its task and PR;
 its transcript (C8, `<session>/subagents/agent-<id>.jsonl`) gives its activity and cost; GitHub (C1, C2, C12) gives
-the quality of what it produced.
+the quality of what it produced. The `team-report` skill (`scripts/agent_report.py`) reports AG1, AG2, AG4, AG5, AG7
+and AG8 today; the rest come with the scorecard.
 
 ### Activity
 
@@ -336,7 +337,7 @@ scorecard folder, outside the repository and any agent's checkout (by default `~
 
 | PR | What it adds | Metrics it enables |
 |---|---|---|
-| Recording | The PR facts block (C3) in the developer, fixer and reviewer definitions; `git-gate.py`'s block log (C6); the `Conflicts:` trailer (C4); `Should have caught:` (C12); the daily run on `main` (C11); the owner audit in the lead's routine (C13); the dispatch log hook (C15); the `claim` and `withdrawn` markers and the owner's ruling format (C2) | All but MN9, MN10 and those needing C14 |
+| Recording | The PR facts block (C3) in the developer, fixer and reviewer definitions; `git-gate.py`'s block log (C6); the `Conflicts:` trailer (C4); `Should have caught:` (C12); the daily run on `main` (C11); the owner audit in the lead's routine (C13); the `claim` and `withdrawn` markers and the owner's ruling format (C2) | All but MN9, MN10 and those needing C14 |
 | Scorecard | `scorecard.py` (its readers include the repository settings, C16), its tests, and the scorecard page's template | Every metric above with data |
 | Release flags | Done (`docs/flags.md`); the flags-on daily run comes with Recording | MN9, PL8; MN1 with flags on after Recording |
 | Each pack | The code-health command and the test report (C14) | MN10, BU9, BU10 |
