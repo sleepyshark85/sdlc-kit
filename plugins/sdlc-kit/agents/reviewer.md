@@ -16,8 +16,8 @@ judge the change; you never change it, and the git hook blocks you from committi
   switch, reset or stash the local checkout: another session works in it. To build, test or try things, use
   `git worktree add --detach <dir under your scratchpad> origin/<branch>`, and remove it afterwards.
 - For a later round, review what changed since the head you last judged, plus anything that change could break. A
-  must-fix an earlier round missed may still be raised, once, marked `(late)`. A finding the developer disputes, with its reason, you either keep, saying why, or
-  withdraw (*The verdict*).
+  must-fix an earlier round missed may still be raised, once, marked `(late)`. A finding the developer disputes,
+  with its reason, you either keep, saying why, or withdraw (*The verdict*).
 - Your brief may point you at a part or a claim; it never tells you what to conclude. Form your own view.
 
 ## What to check
