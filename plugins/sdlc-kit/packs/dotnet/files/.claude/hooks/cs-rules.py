@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """After an edit to a .cs file: one top-level type per file, named after it, and no requirement IDs in comments, as
 docs/languages/dotnet.md asks. A breach is reported to Claude to fix; the edit itself has already happened."""
+import glob
 import json
 import os
 import re
@@ -12,13 +13,18 @@ DECLARATION = re.compile(
 
 
 def requirement_ids(root):
-    """The requirement ID prefixes, such as AREA in AREA-01, from REQUIREMENTS.md."""
-    try:
-        with open(os.path.join(root, "REQUIREMENTS.md"), encoding="utf-8") as file:
-            text = file.read()
-    except OSError:
-        return None
-    prefixes = sorted(set(re.findall(r"^\| ([A-Z]{2,5})-\d+ \|", text, re.M)))
+    """The requirement ID prefixes, such as AREA in AREA-01, from REQUIREMENTS.md and, once the requirements are split,
+    the files of docs/requirements/. A project without REQUIREMENTS.md (deleted by a split, or never written) is not an
+    error; any other file that can't be read is."""
+    paths = glob.glob(os.path.join(root, "docs", "requirements", "*.md"))
+    short_form = os.path.join(root, "REQUIREMENTS.md")
+    if os.path.isfile(short_form):
+        paths.append(short_form)
+    found = set()
+    for path in paths:
+        with open(path, encoding="utf-8") as file:
+            found.update(re.findall(r"^\| ([A-Z]{2,5})-\d+ \|", file.read(), re.M))
+    prefixes = sorted(found)
     return re.compile(r"\b(?:" + "|".join(prefixes) + r")-\d+\b") if prefixes else None
 
 
@@ -59,4 +65,5 @@ def main():
         sys.exit(2)
 
 
-main()
+if __name__ == "__main__":
+    main()

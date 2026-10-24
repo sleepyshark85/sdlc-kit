@@ -13,9 +13,11 @@ packs available are the folders in `${CLAUDE_PLUGIN_ROOT}/packs/`.
    `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/new_project.py" create <folder> "<name>" <pack>...`
    It refuses a folder that isn't empty, and prints the required checks to pass to `setup-repo.sh`.
 2. **Fill the skeletons with the owner,** before any code: the purpose and requirements in `REQUIREMENTS.md`
-   (testable criteria with their edge states), the components, contracts and threat model in `ARCHITECTURE.md`, the
-   first platform decisions in `docs/decisions.md`. Leave a section the owner can't answer yet as a question, not a
-   guess.
+   (testable criteria in EARS patterns, with their edge states), the components, contracts and threat model in
+   `ARCHITECTURE.md`, the first decisions in `docs/decisions.md`. Leave a section the owner can't answer yet as an
+   open question, not a guess. The short forms come first; if the owner's spec already passes a split trigger
+   (`docs/conventions.md`, *Docs grow by splitting*), move that document into its full form with the `split-docs`
+   skill before the first commit.
 3. **The owner's steps,** which the git hook blocks for agents. Give them as `!` commands for the owner to run:
    - create the repository and push the first commit to `main`:
      `git init -b main && git add -A && git commit -m "Start from sdlc-kit" && gh repo create <owner>/<name> --private --source . --push`

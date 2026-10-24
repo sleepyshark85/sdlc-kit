@@ -23,8 +23,20 @@ what the code must do.
   each component's checks before a commit and a push. A blocked action says why; fix the cause, never work around it.
 - **The simplest thing that works.** Build only what the task's acceptance criteria need: no abstraction without a
   current user, no setting without a known case, no optimization without a measured target.
-- **Short docs:** tables and diagrams over prose; cite requirement IDs instead of restating them. `ARCHITECTURE.md`
+- **Short docs:** tables and diagrams over prose; cite requirement IDs instead of restating them. The architecture
   names no type or API.
+- **Docs grow by splitting.** The requirements and the architecture start in their short forms (`REQUIREMENTS.md`,
+  `ARCHITECTURE.md`). The lead moves one into its full form, req42's `docs/requirements/` or arc42's
+  `docs/architecture/` with a file per area or subsystem, with the `split-docs` skill in a PR of its own, when any
+  of these holds:
+
+  | Trigger | Requirements | Architecture |
+  |---|---|---|
+  | Length | Over about 300 lines | Over about 300 lines |
+  | Breadth | A fourth area (ID prefix) | A component with components of its own (a subsystem) |
+  | Contention | Two parallel tasks of a wave would edit it | Two parallel tasks of a wave would edit it |
+
+  Once split, a document stays split, and agents read the index and then only the files their task names.
 - **Short code comments:** say what the code cannot, briefly; no requirement IDs (test names carry them).
 - **Who codes and reviews:** the plugin's agents. `developer` (Opus) for tasks and anything risky, `fixer` (Sonnet)
   only for small, well-bounded fixes, `reviewer` (Opus) for every PR. **Each PR gets a new reviewer**, kept for that
@@ -59,7 +71,9 @@ Branch protection on `main` (applied by `scripts/setup-repo.sh`) requires these,
   secrets, the human, storage where a real one is impractical. Everything inside the project is tested with real
   objects; prefer a real database in a container over a fake.
 - **Fast and deterministic:** a flaky test, or one over a second offline, is a bug to fix, never something to retry.
-- **Test names carry the requirement ID** they check, and `docs/traceability.md` maps them.
+- **Test names carry the requirement ID** they check, with the criterion's number where a test checks one
+  (`API_01_2_…`), and `docs/traceability.md` maps them (each area file's *Traceability* section, once the
+  requirements are split).
 - **Every parser and validator has generated-input tests** (property or fuzz tests); a failure prints its seed.
 - **Golden files change only on purpose**, through an explicit update flag, and the diff is reviewed like code.
 - **A new test earns its place:** it kills a mutant that survives without it, or pins an acceptance criterion.
@@ -95,6 +109,6 @@ would read it; anything below is a must-fix, however correct the code is.
 ## Design rules
 
 The project's own rules that code must keep: layers, data flow, runtime model, and what must never happen. A change
-to one changes `ARCHITECTURE.md` first.
+to one changes the architecture first.
 
 - *(Add the project's design rules here as it grows.)*

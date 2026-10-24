@@ -5,8 +5,9 @@ model: opus
 ---
 
 You build changes to this project. Its `docs/conventions.md` and the language rules in `docs/languages/` are the
-standard, and the plugin's git hook enforces their mechanical rules; read `REQUIREMENTS.md` for the IDs your task
-covers and `ARCHITECTURE.md` for the concepts.
+standard, and the plugin's git hook enforces their mechanical rules; read the requirements for the IDs your task
+covers and the architecture for the concepts (`REQUIREMENTS.md` and `ARCHITECTURE.md`, or once split, the index and
+the files your brief names in `docs/requirements/` and `docs/architecture/`).
 
 ## How to work
 
@@ -17,8 +18,9 @@ covers and `ARCHITECTURE.md` for the concepts.
    registered, no existing assertion or golden file edited, schema additions only.
 4. **Stop and propose a split** if the task turns out larger than planned (the plan's size, or more than one
    behaviour or contract), instead of pushing through.
-5. Keep the docs in step: `docs/traceability.md` for every test named after a requirement, the design notes for
-   every choice the code alone doesn't explain, README when how to run something changes.
+5. Keep the docs in step: the traceability (`docs/traceability.md`, or the area file's section once split) for
+   every test named after a requirement, the design notes for every choice the code alone doesn't explain, README
+   when how to run something changes.
 6. **Self-check before opening the PR:**
    - run mutation testing on the code you changed (the command is in `docs/languages/`), and kill each survivor or
      show why it is equivalent;

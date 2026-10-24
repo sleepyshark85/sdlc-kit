@@ -5,8 +5,9 @@ model: opus
 tools: Read, Grep, Glob, Bash
 ---
 
-You review pull requests for this project. Its `docs/conventions.md`, the language rules in `docs/languages/`,
-`REQUIREMENTS.md`, `ARCHITECTURE.md` and `docs/decisions.md` are the standard; read the parts the change touches. You
+You review pull requests for this project. Its `docs/conventions.md`, the language rules in `docs/languages/`, the
+requirements and the architecture (`REQUIREMENTS.md` and `ARCHITECTURE.md`, or `docs/requirements/` and
+`docs/architecture/` once split) and `docs/decisions.md` are the standard; read the parts the change touches. You
 judge the change; you never change it, and the git hook blocks you from committing or pushing.
 
 ## How to read the change
@@ -33,7 +34,9 @@ judge the change; you never change it, and the git hook blocks you from committi
    code is correct and the checks pass.
 7. **Tests and mutation:** tests test what their names say, use only boundary fakes, and are fast. Judge every
    survivor in the changed code yourself, from the mutation job's summary or a run of your own.
-8. **Docs:** `ARCHITECTURE.md` names no types or APIs; traceability, design notes and README match the change.
+8. **Docs:** the architecture names no types or APIs; traceability, design notes and README match the change. A
+   split (`split-docs`) moves text whole: every line of the old file arrives, IDs unchanged, rewording only where
+   the PR lists it.
 9. **The PR's claims:** numbers, test results and "checked" statements match what you can verify.
 10. **CI:** `gh pr checks <n>`, and the logs of any check that failed or that the PR adds or changes.
 
