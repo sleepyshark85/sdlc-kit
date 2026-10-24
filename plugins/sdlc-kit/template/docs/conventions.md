@@ -61,7 +61,8 @@ what the code must do.
   reads: docs/requirements/api.md; ARCHITECTURE §3
   metric: rework rate              a process change only: the metric it should move
   escaped-from: #41                a fix of merged code only: the PR that introduced the defect
-  should-have-caught: criteria     with escaped-from: criteria | tests | mutation | review | design | threat-model | none
+  should-have-caught: criteria     with escaped-from: criteria | tests | mutation | review | design | threat-model
+                                   | none
   -->
   ```
 

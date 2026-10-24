@@ -83,8 +83,8 @@ Four layers, as watching only the first two is how teams conclude AI made them f
 | People | What did it take from the owner? | Escalations (`owner-decision`); one merged PR per wave read in full, and what review missed |
 
 [`measuring.md`](measuring.md) details each measure: the phase and practice it belongs to, how it is collected, and
-what it tells the owner, the agent team's activity, cost and quality included. The kit's first version carries the
-conventions some of them need (cause labels, the PR facts block, the `owner-decision` label and the owner's ruling, the audit); the
+what it tells the owner, the agent team's activity, cost and quality included. The kit carries the conventions they
+need (cause labels, the PR facts block, the `owner-decision` label and the owner's ruling, the audit); the
 collectors still missing and the scorecard script that reads them are [planned](../README.md#planned).
 
 ## Changing the process
