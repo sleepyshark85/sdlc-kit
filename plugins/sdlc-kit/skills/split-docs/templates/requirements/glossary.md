@@ -1,3 +1,4 @@
+<!-- Structure after req42 (https://req42.de). -->
 # Glossary
 
 The domain's terms (req42 §8), used in this sense everywhere: in the docs, the code and the tests. The architecture

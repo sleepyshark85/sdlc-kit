@@ -1,3 +1,4 @@
+<!-- Structure after req42 (https://req42.de). -->
 # Requirements
 
 What {{project}} must do, language-neutral. Each requirement has an ID (`AREA-nn`) that tests carry in their names,

@@ -1,0 +1,8 @@
+This project was started from sdlc-kit (https://github.com/sleepyshark85/sdlc-kit), Copyright 2026 Trung Le. The
+files it copied from the kit's template and language packs are licensed under the Apache License, Version 2.0
+(.sdlc/LICENSE); keep this notice when you redistribute them.
+
+The architecture template (ARCHITECTURE.md, or docs/architecture/ once split) is adapted from arc42
+(https://arc42.org), © Dr. Peter Hruschka, Dr. Gernot Starke and contributors, under Creative Commons
+Attribution-ShareAlike 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). What the project writes into it is its
+own.

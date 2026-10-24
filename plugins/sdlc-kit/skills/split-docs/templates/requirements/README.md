@@ -1,3 +1,4 @@
+<!-- Structure after req42 (https://req42.de). -->
 # Requirements
 
 What the project must do, language-neutral, in [req42](https://req42.de)'s structure; the section numbers are

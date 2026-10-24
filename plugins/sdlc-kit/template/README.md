@@ -17,3 +17,5 @@
 
 [`docs/conventions.md`](docs/conventions.md): every change through a pull request, reviewed by a fresh reviewer agent
 and merged once the required checks pass.
+
+Built with [sdlc-kit](https://github.com/sleepyshark85/sdlc-kit); its notice is in [`NOTICE`](NOTICE).

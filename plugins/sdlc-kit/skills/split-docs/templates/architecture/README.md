@@ -1,3 +1,5 @@
+<!-- Adapted from arc42 (https://arc42.org), © Dr. Peter Hruschka, Dr. Gernot Starke and contributors, licensed
+     under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). What a project writes into it is its own. -->
 # Architecture
 
 The concepts, subsystems, contracts and flows of the project, language-neutral, in [arc42](https://arc42.org)'s

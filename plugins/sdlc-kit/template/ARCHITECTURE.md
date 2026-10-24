@@ -1,3 +1,5 @@
+<!-- Adapted from arc42 (https://arc42.org), © Dr. Peter Hruschka, Dr. Gernot Starke and contributors, licensed
+     under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). What a project writes into it is its own. -->
 # Architecture
 
 The concepts, components, contracts and flows of {{project}}, language-neutral: **no code, type, package or API names
