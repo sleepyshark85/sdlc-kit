@@ -126,7 +126,7 @@ class AgentReportTest(unittest.TestCase):
         self.assertEqual(report.parse_time("2026-10-24T10:00:00Z"), report.parse_time("2026-10-24T12:00:00+02:00"))
 
     def test_an_entry_with_an_unreadable_time_is_skipped(self):
-        self.write(f"{SESSION}.jsonl", [assistant("m1", "yesterday", fresh=1),
+        self.write(f"{SESSION}.jsonl", [assistant("m1", "yesterday", fresh=1), assistant("m0", 1729764000, fresh=1),
                                         assistant("m2", "2026-10-24T10:00:00Z", fresh=1)])
         self.write(os.path.join(SESSION, "git-gate", "main.jsonl"),
                    [{"time": "soon", "rule": "force-push"}, {"time": "2026-10-24T10:00:01Z", "rule": "force-push"}])
@@ -222,6 +222,16 @@ class AgentReportTest(unittest.TestCase):
         per_dispatch = text[text.index("## Per dispatch"):]
         self.assertLess(text.index("| lead | 1 |"), text.index("| developer | 1 |"))
         self.assertLess(per_dispatch.index(f"| lead | {OPUS} |"), per_dispatch.index(f"| developer | {OPUS} |"))
+
+    def test_roles_that_cost_the_same_are_listed_by_name(self):
+        self.write(f"{SESSION}.jsonl", [assistant("m1", "2026-10-24T10:00:00Z", output=1)])
+        self.subagent("a1", "sdlc-kit:reviewer", [assistant("r1", "2026-10-24T10:00:00Z", output=1)])
+        self.subagent("a2", "sdlc-kit:developer", [assistant("d1", "2026-10-24T10:00:00Z", output=1)])
+
+        text = report.report(list(self.agents().values()), PRICES, US_ONLY)
+
+        self.assertLess(text.index("| developer | 1 |"), text.index("| lead | 1 |"))
+        self.assertLess(text.index("| lead | 1 |"), text.index("| reviewer | 1 |"))
 
     def test_a_role_and_models_dispatches_show_their_median_and_largest(self):
         self.write(f"{SESSION}.jsonl", [assistant("m1", "2026-10-24T10:00:00Z", fresh=1)])
