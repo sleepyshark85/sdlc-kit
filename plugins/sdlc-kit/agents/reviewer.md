@@ -28,8 +28,8 @@ judge the change; you never change it, and the git hook blocks you from committi
    finding.
 4. **Off on `main`:** a PR the plan marks dark or flagged changes no behaviour with the defaults: no existing
    assertion or golden file edited, schema additions only. Dark: nothing newly registered or wired in. Flagged: wired
-   in only behind its flag, at its one check point; the flag as its row in `docs/flags.md` names it, off by default,
-   and tested off and on. A refactor keeps behaviour, with no existing assertion or golden file edited. A contract
+   in only behind its flag, at its one check point; the flag matches its row in `docs/flags.md`, is off by default,
+   and is tested off and on. A refactor keeps behaviour, with no existing assertion or golden file edited. A contract
    or flag-removal task comes after its switch-on, keeps behaviour with the defaults, and removes only the old
    path's tests. Any of these that changes behaviour is a must-fix.
 5. **The conventions** and the language rules, every point; **the architecture's** layers, contracts, runtime model

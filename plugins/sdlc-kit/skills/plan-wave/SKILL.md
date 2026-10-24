@@ -54,7 +54,7 @@ use its defaults. An unfinished feature is off on `main` in one of three ways:
 The **switch-on** task is the feature's release, small and revertible: it wires the feature in, or flips its flag's
 default to on. A flag's **removal** task (the flag and the old path deleted) follows within two waves of its
 switch-on. The plan PR that plans a flag writes its row in `docs/flags.md` and lists its removal task; the switch-on
-and removal tasks update the row's *State*, so no two parallel tasks edit the same row.
+and removal tasks update the row's *State*, and like any tasks sharing a file, they never run in parallel.
 
 A dark or flagged task's PR says "behaviour-neutral with defaults", with evidence, and the reviewer checks it:
 
