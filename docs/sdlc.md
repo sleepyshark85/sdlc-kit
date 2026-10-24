@@ -50,13 +50,14 @@ requirement ──► wave plan (plan-wave) ──► plan PR reviewed for its d
 ```
 
 1. **Plan.** The `plan-wave` skill turns requirements into tasks of one behaviour or one contract, each S or M in
-   size, each dark, switch-on or technical. The plan is a PR, reviewed against its decomposition checklist.
+   size, each dark, flagged, switch-on or technical. The plan is a PR, reviewed against its decomposition checklist.
 2. **Build.** The lead dispatches one task per developer with the `dispatch` skill. The developer builds it, runs
    mutation testing on its diff, re-reads the diff against the bar, and opens the PR with its assumptions.
 3. **Review.** A new reviewer judges the PR against the conventions, the architecture and the quality bar, and posts
    `**Verdict: APPROVE** at <sha>` or the must-fixes, each with a cause label. At most three rounds.
 4. **Merge.** The lead sets auto-merge; GitHub merges once the review gate and every required check pass on an
-   up-to-date branch. A dark task changes no behaviour; the switch-on task releases the feature.
+   up-to-date branch. A dark or flagged task changes no behaviour with the defaults, so `main` shows only finished
+   features; the switch-on task releases the feature.
 5. **Learn.** At the end of a wave the owner reads the scorecard. A process change names the metric it should move,
    and is kept or reverted on it.
 

@@ -1,6 +1,6 @@
 ---
 name: plan-wave
-description: Plans a wave of work as small, deliverable tasks (one behaviour or one contract each), marks each dark, switch-on or technical, and writes the plan page for its decomposition review. Use before any building starts on a feature, a phase or a batch of requirements.
+description: Plans a wave of work as small, deliverable tasks (one behaviour or one contract each), marks each dark, flagged, switch-on or technical, and writes the plan page for its decomposition review. Use before any building starts on a feature, a phase or a batch of requirements.
 argument-hint: "[wave goal]"
 ---
 
@@ -40,31 +40,51 @@ Goal: `$ARGUMENTS`. Small PRs come from small tasks decided here, never from spl
 - **Detail goes into boundaries, not internals:** contracts and criteria are exact; class structure is left to the
   developer.
 
-## Dark until switched on
+## Off on `main` until switched on
 
-A feature built over several tasks merges dark. Every task before the last is **dark** and changes no behaviour;
-the **switch-on** task wires it in, small and revertible, and is the feature's release. Composition is the switch:
-an unfinished feature is not registered, wired into the application or given a command, and a library type stays
-non-public, until its switch-on task. Replacing a behaviour uses branch by abstraction: the new implementation behind
-the existing contract, a small switch-over task, then the old one deleted.
+PRs merge as soon as they are approved, and `main` always shows only finished features: the daily run and any demo
+use its defaults. An unfinished feature is off on `main` in one of three ways:
 
-A dark task's PR says "behaviour-neutral", with evidence, and the reviewer checks it:
+| The feature… | Off on `main` by | Kind of its tasks |
+|---|---|---|
+| Is new code beside the old | **Composition:** not registered, wired into the application or given a command, and a library type stays non-public | Dark |
+| Changes old code paths | **A release flag**, off by default, checked at one point | Flagged |
+| Changes a schema or a persisted or shared format | Neither: **expand, then contract**. Data written in a new format stays written, whatever a flag says | Dark (expand), switch-on, technical (contract) |
 
-| Leak | Rule for a dark task |
+The **switch-on** task is the feature's release, small and revertible: it wires the feature in, or flips its flag's
+default to on. A flag's **removal** task (the flag and the old path deleted) follows within two waves, and the plan
+lists it when it plans the flag.
+
+A dark or flagged task's PR says "behaviour-neutral with defaults", with evidence, and the reviewer checks it:
+
+| Leak | Rule while the feature is off |
 |---|---|
 | Existing behaviour edited | No existing test assertion or golden file changes |
 | Database schema | Additions only; a removal or change comes after the switch-on (expand, then contract) |
-| Persisted or shared formats | Never in a dark task: they are live once merged |
+| Persisted or shared formats | Never: they are live once merged, flag or not |
 | Registration | Not registered at all: a registered, unused component can still change behaviour |
 | Dependencies and startup | Named in the PR, as they run whether the feature is on or not |
+| The flag | In `docs/flags.md`, off by default, read at one point; the task's tests cover it off and on |
 
-A feature-flag system waits until something is deployed: without a deployment its gains (canaries, gradual rollout,
-a kill switch, per-user targeting) don't apply, and each flag doubles the paths to test. Where wiring is not enough,
-a plain setting read once at startup is allowed, with a removal task in the plan.
+### When the feature changes old code
+
+Most of "it touches a lot of old code" is restructuring, not new behaviour: separate the two, and the restructuring
+merges early because it keeps behaviour. Plan with the first of these that fits:
+
+1. **Preparatory refactor** (technical): reshape the old code so the feature fits, behaviour unchanged. A large one
+   is a mechanical PR that names its recipe. It also makes the seam where a flag is checked once.
+2. **Parallel change** (expand, migrate, contract): the new shape beside the old, callers moved in small PRs, the old
+   shape removed. For contracts, schemas, formats and settings.
+3. **Branch by abstraction:** the old behaviour behind a contract, the new one built dark behind the same contract,
+   one small task switching over, the old one deleted.
+4. **A release flag** at the seam, for new behaviour that must sit in old code paths while it is unfinished.
+5. **A visible increment:** a piece useful on its own ships as its own small release instead of being hidden.
+6. **Last resort, stacked PRs released together:** each slice still its own reviewed PR, the stack merged as one. The
+   plan says why 1–5 don't fit, and the owner approves it.
 
 ## Decomposition checklist
 
-- [ ] Each task is deliverable alone, and dark, switch-on or technical.
+- [ ] Each task is deliverable alone, and dark, flagged, switch-on or technical.
 - [ ] Each task holds one behaviour or one contract, and its expected size is S or M.
 - [ ] Each numbered criterion of the wave's requirements is cited by exactly one task, edge states included.
 - [ ] Each task's `Reads:` names files and sections, never a whole document.
@@ -72,7 +92,9 @@ a plain setting read once at startup is allowed, with a removal task in the plan
 - [ ] Each invariant names the task that starts it.
 - [ ] The order works: no task needs one that comes after it.
 - [ ] Parallel tasks share no file, docs included.
-- [ ] Each feature has exactly one switch-on task.
+- [ ] Each feature has exactly one switch-on task, and each flag a removal task within two waves.
+- [ ] Each change to old behaviour is a switch-on, a visible increment or behind a flag, and the restructuring it
+  needs comes first as preparatory refactors.
 
 ## Example
 

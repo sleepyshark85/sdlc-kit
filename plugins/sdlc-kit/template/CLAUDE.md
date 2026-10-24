@@ -12,6 +12,7 @@ The conventions every change follows (workflow, tests, quality bar, design rules
 - `ARCHITECTURE.md`: concepts, components, contracts, flows and threats (arc42, short form; `docs/architecture/` once
   split). **No code, type or API names.**
 - `docs/plan/`: the waves of tasks (the `plan-wave` skill writes them from `docs/plan/template.md`).
+- `docs/flags.md`: the release flags of unfinished features, each with its removal task.
 - `docs/decisions.md`: the decisions taken, platform and design, dependencies and the required checks each language
   adds.
 - `docs/languages/`: each language's rules, added by its pack.

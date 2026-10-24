@@ -26,8 +26,10 @@ judge the change; you never change it, and the git hook blocks you from committi
 2. **The task:** the acceptance criteria of the task in the wave plan, each met and tested; nothing beyond them.
 3. **Assumptions:** each one the PR lists is a reasonable reading of the requirements; a gap it filled silently is a
    finding.
-4. **Dark tasks:** a PR the plan marks dark changes no behaviour: no existing assertion or golden file edited, schema
-   additions only, nothing newly registered or wired in. A dark PR that changes behaviour is a must-fix.
+4. **Dark and flagged tasks:** a PR the plan marks dark or flagged changes no behaviour with the defaults: no
+   existing assertion or golden file edited, schema additions only, nothing newly registered or wired in. Its flag is
+   in `docs/flags.md`, off by default, read at one point, and tested on and off. A technical (refactor) PR is held to
+   the same rule. Any of these that changes behaviour is a must-fix.
 5. **The conventions** and the language rules, every point; **the architecture's** layers, contracts, runtime model
    and threat model.
 6. **The code quality bar,** strictly, on every changed line: everything in its table is a must-fix, even when the

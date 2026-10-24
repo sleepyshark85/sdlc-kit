@@ -54,6 +54,7 @@ plugins/sdlc-kit/
     docs/conventions.md             how we work (split triggers included), required checks, tests, the bar, design rules
     docs/decisions.md               design and platform decisions, dependencies, required checks, mutation floors
     docs/traceability.md            requirement → tests
+    docs/flags.md                   the release flags of unfinished features, with their removal tasks
     docs/plan/template.md           a wave's plan: one section per task
     .sdlc/checks.toml               components, their paths and checks (read by the hook and changes.py)
     .sdlc/sdlc_paths.py             which component a path belongs to; shared by the hook and changes.py
@@ -121,7 +122,9 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | The developer self-checks before review | Cheaper than a review round | `developer` step 6 (mutation on the diff, diff re-read, base merged) | Guided |
 | The code quality bar: good code, not working code | AI code is plausible and subtly wrong | conventions *Code quality bar*; `reviewer` check 6 | Guided |
 | Least privilege for agents | The coding agent is an attack surface | `template/.claude/settings.json` (deny rules); `git-gate.py`: no force push, no branch deletion, merge only with `--auto`, no repository settings | Enforced |
-| Unfinished work merges dark; one switch-on task releases it | Trunk-based small PRs without a flag system | `plan-wave` *Dark until switched on*; `developer` step 3; `reviewer` check 4; quality bar *PR scope*; `dotnet.md` (composition as the switch) | Trial |
+| Unfinished work merges but is off on `main`; one switch-on task releases it | Trunk-based small PRs; `main` shows only finished features for the daily run and demos | `plan-wave` *Off on `main` until switched on* (composition, release flags, expand then contract); `developer` step 3; `reviewer` check 4; quality bar *PR scope*; `dotnet.md` (composition and the `Flags` class) | Trial |
+| Release flags bounded: registered, off by default, one check point, removed within two waves | Flags are cheap to add and costly to keep; each doubles the paths to test | `template/docs/flags.md`; `plan-wave` (the leak table, removal tasks, checklist); quality bar *PR scope*; `reviewer` check 4 | Trial |
+| Old code reshaped before the feature: preparatory refactor, parallel change, branch by abstraction | A feature that touches much old code merges in small PRs only once restructuring is apart from behaviour | `plan-wave` *When the feature changes old code*; `reviewer` check 4 (a refactor keeps behaviour) | Trial |
 | AI authorship visible, a person accountable | Accountability stays with a person | `developer` step 8 (attribution line); owner decides after round 3 | Guided |
 
 ### 4. Security

@@ -5,7 +5,7 @@ goes to [fix](fix.md) instead.
 
 ```text
 Build {{task id}}: {{the task's outcome, one line}}.
-Acceptance criteria and kind (dark, switch-on or technical): docs/plan/{{wave file}}, section {{task id}}.
+Acceptance criteria and kind (dark, flagged, switch-on or technical): docs/plan/{{wave file}}, section {{task id}}.
 
 Branch `{{branch}}` from `origin/{{base}}`; open the PR against `{{base}}`{{, stacked on #N, or nothing}}.
 Read first: {{the task's Reads line from the plan, e.g. "REQUIREMENTS API-01…03; ARCHITECTURE §3, §5"}}.

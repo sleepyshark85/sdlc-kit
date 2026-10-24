@@ -13,9 +13,11 @@ what the code must do.
   `test/` and a slug.
 - **Small tasks make small PRs.** Work is planned as tasks of one behaviour or one contract each (the `plan-wave`
   skill), and each task is one PR. A developer who finds a task larger than planned stops and proposes a split.
-- **Unfinished work merges dark.** A feature built over several tasks is not registered, wired in or given a command
-  until its switch-on task; every earlier task is behaviour-neutral, and says so in its PR (`plan-wave`, *Dark until
-  switched on*).
+- **Unfinished work merges, but is off on `main`.** PRs merge once approved, and `main` with its defaults shows only
+  finished features, for the daily run and any demo. New code stays unwired until its switch-on task; a change to
+  old code paths sits behind a release flag, off by default and listed in `docs/flags.md`; a schema or format change
+  goes expand, then contract. Every task before the switch-on is behaviour-neutral with the defaults, and says so in
+  its PR (`plan-wave`, *Off on `main` until switched on*).
 - **One change per PR.** A mechanical change (rename, move, reformat) is its own PR and names the command that made it.
 - **Hooks enforce the mechanical rules** (the plugin's `git-gate.py`, with this project's `.sdlc/checks.toml`): no
   commit on `main` or push to it, branch prefixes, staged files before a commit, no force push, merges only with
@@ -96,7 +98,7 @@ would read it; anything below is a must-fix, however correct the code is.
 | Performance and bounds | Unbounded growth (collection, queue, retry, pagination); I/O without a timeout or cancellation; queries in a loop; a new query on an unindexed column |
 | Dependencies | A new dependency without a line in `docs/decisions.md` saying why the standard library is not enough, its licence, and that it is maintained |
 | Idiom and size | Code that fights the language's idiom; a workaround larger than its problem; an abstraction or option without a current user |
-| PR scope | More than one change in a PR; a lock or generated file that doesn't match its source; a dark PR that changes behaviour |
+| PR scope | More than one change in a PR; a lock or generated file that doesn't match its source; a dark or flagged PR that changes behaviour with the defaults; a flag not in `docs/flags.md`, checked in more than one place, or past its removal task |
 | Tests | A test that would pass with the behaviour broken; an error test that doesn't pin which failure it is; logic deciding what a test asserts (case tables and property tests are welcome) |
 | Mutation | A surviving mutant in the changed code: kill it, delete what makes it equivalent, or show in the PR why it is equivalent |
 
