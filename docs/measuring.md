@@ -336,6 +336,6 @@ scorecard folder, outside the repository and any agent's checkout (by default `~
 | PR | What it adds | Metrics it enables |
 |---|---|---|
 | Recording | The PR facts block (C3) in the developer, fixer and reviewer definitions; `git-gate.py`'s block log (C6); the `Conflicts:` trailer (C4); `Should have caught:` (C12); the daily run on `main` (C11); the owner audit in the lead's routine (C13); the dispatch log hook (C15); the `claim` and `withdrawn` markers and the owner's ruling format (C2) | All but MN9, MN10 and those needing C14 |
-| Scorecard | `scorecard.py`, its tests, and the scorecard page's template | Every metric above with data |
+| Scorecard | `scorecard.py` (its readers include the repository settings, C16), its tests, and the scorecard page's template | Every metric above with data |
 | Release flags (#4) | `docs/flags.md` and the flags-on daily run | MN9, PL8, MN1 with flags on |
-| Each pack | The code-health command (C14) | MN10, BU9, BU10 |
+| Each pack | The code-health command and the test report (C14) | MN10, BU9, BU10 |
