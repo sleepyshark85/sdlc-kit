@@ -21,7 +21,8 @@ practice (DORA, NIST SSDF, OWASP, OpenSSF).
 3. Plan the first wave: `/sdlc-kit:plan-wave <goal>`. Then the main session dispatches each task with
    `/sdlc-kit:dispatch`.
 
-Prerequisites: Claude Code, the GitHub CLI, Python 3.11 or later, and each pack's tools (the .NET SDK for `dotnet`).
+Prerequisites: Claude Code, the GitHub CLI, Git 2.38 or later (the review gate's `merge-tree --write-tree`), Python 3.11
+or later, and each pack's tools (the .NET SDK for `dotnet`).
 
 ## Structure
 

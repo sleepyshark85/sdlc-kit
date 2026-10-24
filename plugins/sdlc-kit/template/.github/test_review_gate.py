@@ -83,7 +83,9 @@ class ReviewGateTest(unittest.TestCase):
         self.git("update-ref", f"refs/remotes/origin/{base}", base)
         env = {**os.environ, "REVIEWERS": reviewers}
         run = subprocess.run([sys.executable, GATE, self.git("rev-parse", "pr"), base, "main"], cwd=self.repo,
-                             input=json.dumps(comments), capture_output=True, text=True, check=True, env=env)
+                             input=json.dumps(comments), capture_output=True, text=True, env=env)
+        if run.returncode != 0:
+            self.fail(f"review_gate.py exited {run.returncode}: {run.stderr.strip()}")
         return tuple(run.stdout.rstrip("\n").split("\t"))
 
     def test_an_approval_naming_the_head_passes(self):

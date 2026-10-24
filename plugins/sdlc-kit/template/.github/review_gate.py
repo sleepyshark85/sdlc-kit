@@ -25,6 +25,8 @@ import sys
 ALLOWED_AUTHORS = {"OWNER", "MEMBER", "COLLABORATOR"}
 VERDICT_PREFIX = "**Verdict:"
 APPROVAL = re.compile(r"\*\*Verdict: APPROVE\*\* at ([0-9a-f]{40})")
+# merge-tree --write-tree, which replays a merge without a worktree, arrived in this Git release.
+MERGE_TREE_GIT = "2.38"
 
 
 def git(*args):
@@ -103,7 +105,8 @@ def replay(commit, onto):
     merge = subprocess.run(["git", "merge-tree", "--write-tree", onto, commit], capture_output=True, text=True)
     if merge.returncode == 1:
         return None
-    merge.check_returncode()
+    if merge.returncode != 0:
+        sys.exit(f"git merge-tree --write-tree failed; it needs Git {MERGE_TREE_GIT} or later: {merge.stderr.strip()}")
     return merge.stdout.split()[0]
 
 
