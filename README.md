@@ -45,7 +45,7 @@ plugins/sdlc-kit/
   hooks/
     hooks.json                      wires the two hooks into every session that has the plugin
     git-gate.py                     git and GitHub rules, and the project's checks before a commit and a push,
-                                    in a repository with .sdlc/checks.toml
+                                    in a repository with .sdlc/checks.toml; logs each block's rule per agent
     context-size.py                 logs each agent's context size; warns at 150k and 300k tokens
     tests/
   scripts/

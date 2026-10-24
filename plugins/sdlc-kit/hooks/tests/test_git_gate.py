@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime
 
 HOOK = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "git-gate.py")
 BLOCKED = 2
@@ -72,16 +73,21 @@ class GitGateTest(unittest.TestCase):
         with open(path, encoding="utf-8") as file:
             return file.read().split()
 
-    def hook(self, command, agent_type=None, cwd=None, project=None):
+    def hook(self, command, agent_type=None, cwd=None, project=None, session=None):
         payload = {"tool_input": {"command": command}, "cwd": cwd or self.repo}
         if agent_type:
             payload["agent_type"] = agent_type
+        if session:
+            payload["transcript_path"] = session + ".jsonl"
         return run_hook(payload, project)
 
-    def assert_blocked(self, command, says, agent_type=None, cwd=None, project=None):
-        run = self.hook(command, agent_type, cwd, project)
+    def assert_blocked(self, command, says, rule, agent_type=None, cwd=None, project=None):
+        """The command is blocked with a reason that says this, and the block is logged under this rule."""
+        session = self.session()
+        run = self.hook(command, agent_type, cwd, project, session)
         self.assertEqual(BLOCKED, run.returncode, run.stderr)
         self.assertIn(says, run.stderr)
+        self.assertEqual([rule], [entry["rule"] for entry in self.logs(session)["main.jsonl"]])
 
     def assert_allowed(self, command, agent_type=None):
         run = self.hook(command, agent_type)
@@ -89,26 +95,119 @@ class GitGateTest(unittest.TestCase):
 
     def test_a_commit_on_main_is_blocked(self):
         self.git("switch", "--quiet", "main")
-        self.assert_blocked("git commit -m x", "never commit on main")
+        self.assert_blocked("git commit -m x", "never commit on main", "commit-on-default")
+
+    def test_a_commit_on_main_with_unbalanced_quotes_is_blocked(self):
+        self.git("switch", "--quiet", "main")
+        self.assert_blocked('git commit -m "x', "never commit on main", "commit-on-default")
 
     def test_a_push_to_main_is_blocked(self):
-        for command in ("git push origin main", "git push origin HEAD:main", "git push origin feature/x:refs/heads/main",
-                        "git push --all"):
+        for command, rule in (("git push origin main", "push-to-default"),
+                              ("git push origin HEAD:main", "push-to-default"),
+                              ("git push origin feature/x:refs/heads/main", "push-to-default"),
+                              ("git push --all", "push-all")):
             with self.subTest(command=command):
-                self.assert_blocked(command, "main")
+                self.assert_blocked(command, "main", rule)
+
+    def session(self):
+        """A scratch session's path, without its .jsonl, as Claude Code passes it in transcript_path."""
+        scratch = tempfile.TemporaryDirectory(prefix="git-gate-session-")
+        self.addCleanup(scratch.cleanup)
+        return os.path.join(scratch.name, "session")
+
+    def run_in(self, session, command, **payload):
+        return run_hook({"tool_input": {"command": command}, "cwd": self.repo, "transcript_path": session + ".jsonl",
+                         **payload})
+
+    def logs(self, session):
+        """The blocks the session logged, by log file."""
+        folder = os.path.join(session, "git-gate")
+        logs = {}
+        for name in os.listdir(folder) if os.path.isdir(folder) else []:
+            with open(os.path.join(folder, name), encoding="utf-8") as file:
+                logs[name] = [json.loads(line) for line in file]
+        return logs
+
+    def test_a_block_logs_its_rule_agent_and_time(self):
+        session = self.session()
+
+        self.run_in(session, "git push --force origin feature/x", agent_id="a1", agent_type="sdlc-kit:developer")
+
+        [entry] = self.logs(session)["a1.jsonl"]
+        time = entry.pop("time")
+        self.assertEqual({"agent_type": "sdlc-kit:developer", "rule": "force-push"}, entry)
+        datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ")
+
+    def test_the_main_session_logs_as_main(self):
+        self.git("switch", "--quiet", "main")
+        session = self.session()
+
+        self.run_in(session, "git commit -m x")
+
+        [entry] = self.logs(session)["main.jsonl"]
+        self.assertEqual(("main", "commit-on-default"), (entry["agent_type"], entry["rule"]))
+
+    def test_each_block_of_a_session_adds_a_line(self):
+        session = self.session()
+
+        self.run_in(session, "git push --force origin feature/x")
+        self.run_in(session, "git push origin main")
+
+        rules = [entry["rule"] for entry in self.logs(session)["main.jsonl"]]
+        self.assertEqual(["force-push", "push-to-default"], rules)
+
+    def test_the_log_holds_a_fixed_rule_and_no_command_text(self):
+        session = self.session()
+
+        self.run_in(session, 'gh pr comment 1 --body "deploy key hunter2-SECRET $X"')
+        self.run_in(session, "git switch --create bad/one")
+        self.run_in(session, "git switch --create bad/two")
+
+        entries = self.logs(session)["main.jsonl"]
+        self.assertEqual(["unreadable-body", "branch-prefix", "branch-prefix"], [entry["rule"] for entry in entries])
+        for text in ("hunter2", "bad/one", "bad/two"):
+            self.assertNotIn(text, json.dumps(entries))
+
+    def test_an_allowed_command_logs_nothing(self):
+        session = self.session()
+
+        self.run_in(session, "git status")
+
+        self.assertEqual({}, self.logs(session))
+
+    def test_a_malformed_config_still_blocks_and_is_logged(self):
+        self.write(".sdlc/checks.toml", "this is = = not toml\n")
+        session = self.session()
+
+        run = self.run_in(session, "git status")
+
+        self.assertEqual(BLOCKED, run.returncode, run.stderr)
+        self.assertIn("does not parse", run.stderr)
+        self.assertEqual("config-parse", self.logs(session)["main.jsonl"][0]["rule"])
+
+    def test_a_log_that_cannot_be_written_still_blocks(self):
+        not_a_folder = os.path.join(self.session() + "-file")
+        with open(not_a_folder, "w", encoding="utf-8") as file:
+            file.write("a file where the session folder's parent should be\n")
+
+        run = self.run_in(os.path.join(not_a_folder, "session"), "git push --force origin feature/x")
+
+        self.assertEqual(BLOCKED, run.returncode, run.stderr)
+        self.assertIn("never force-push", run.stderr)
+        self.assertIn("The block could not be logged", run.stderr)
 
     def test_a_force_push_is_blocked(self):
         for command in ("git push -f", "git push --force-with-lease origin feature/x", "git push origin +feature/x"):
             with self.subTest(command=command):
-                self.assert_blocked(command, "never force-push")
+                self.assert_blocked(command, "never force-push", "force-push")
 
     def test_deleting_a_remote_branch_is_blocked(self):
         for command in ("git push origin --delete feature/y", "git push origin :feature/y"):
             with self.subTest(command=command):
-                self.assert_blocked(command, "deleted by the merge")
+                self.assert_blocked(command, "deleted by the merge", "branch-deletion")
 
     def test_a_branch_without_an_allowed_prefix_is_blocked(self):
-        self.assert_blocked("git switch -c wip", "needs one of the prefixes feature/, fix/")
+        self.assert_blocked("git switch -c wip", "needs one of the prefixes feature/, fix/", "branch-prefix")
 
     def test_a_branch_with_a_prefix_from_the_config_is_allowed(self):
         self.assert_allowed("git switch -c fix/thing")
@@ -116,7 +215,7 @@ class GitGateTest(unittest.TestCase):
     def test_staging_in_the_commit_line_is_blocked(self):
         for command in ("git add . && git commit -m x", "git commit -am x"):
             with self.subTest(command=command):
-                self.assert_blocked(command, "stage files in their own command")
+                self.assert_blocked(command, "stage files in their own command", "commit-stages")
 
     def test_a_commit_runs_the_checks_of_the_components_it_stages(self):
         self.write("app/main.py", "print(2)\n")
@@ -128,13 +227,21 @@ class GitGateTest(unittest.TestCase):
     def test_a_failing_commit_check_blocks_the_commit(self):
         self.write("web/main.js", "2\n")
         self.git("add", "web/main.js")
-        self.assert_blocked("git commit -m x", "web's before_commit check")
+        self.assert_blocked("git commit -m x", "web's before_commit check", "check-failed")
+
+    def test_a_check_whose_command_is_not_installed_blocks_the_commit(self):
+        self.write(".sdlc/checks.toml", 'branch_prefixes = ["feature/"]\n\n[[component]]\nname = "web"\n'
+                                        'paths = ["web/"]\ncode = \'\\.js$\'\ndirectory = "web"\n'
+                                        'before_commit = [["no-such-checker-xyz"]]\n')
+        self.write("web/main.js", "2\n")
+        self.git("add", "web/main.js")
+        self.assert_blocked("git commit -m x", "is not on PATH", "check-missing")
 
     def test_a_staged_file_with_unstaged_changes_is_blocked(self):
         self.write("app/main.py", "print(2)\n")
         self.git("add", "app/main.py")
         self.write("app/main.py", "print(3)\n")
-        self.assert_blocked("git commit -m x", "also have unstaged changes")
+        self.assert_blocked("git commit -m x", "also have unstaged changes", "partially-staged")
 
     def test_a_push_tests_the_components_the_branch_changes_beyond_docs(self):
         self.write("app/main.py", "print(2)\n")
@@ -154,38 +261,42 @@ class GitGateTest(unittest.TestCase):
     def test_the_reviewer_never_commits_or_pushes(self):
         for command in ("git commit -m x", "git push origin feature/x"):
             with self.subTest(command=command):
-                self.assert_blocked(command, "the reviewer judges", agent_type="sdlc-kit:reviewer")
+                self.assert_blocked(command, "the reviewer judges", "reviewer-commits", agent_type="sdlc-kit:reviewer")
 
     def test_only_the_reviewer_posts_a_verdict(self):
         command = 'gh pr comment 5 --body "**Verdict: APPROVE** at abc"'
-        self.assert_blocked(command, "only the reviewer posts verdicts", agent_type="sdlc-kit:developer")
-        self.assert_blocked(command, "only the reviewer posts verdicts")
+        self.assert_blocked(command, "only the reviewer posts verdicts", "verdict-not-reviewer",
+                            agent_type="sdlc-kit:developer")
+        self.assert_blocked(command, "only the reviewer posts verdicts", "verdict-not-reviewer")
         self.assert_allowed(command, agent_type="sdlc-kit:reviewer")
 
     def test_a_verdict_in_a_body_file_is_found(self):
         self.write("body.md", "**Verdict: APPROVE** at abc\n")
-        self.assert_blocked("gh pr comment 5 --body-file body.md", "only the reviewer posts verdicts")
+        self.assert_blocked("gh pr comment 5 --body-file body.md", "only the reviewer posts verdicts",
+                            "verdict-not-reviewer")
 
     def test_reading_verdicts_is_allowed(self):
         self.assert_allowed('gh pr view 5 --comments | grep "**Verdict:"')
 
     def test_only_the_reviewer_uses_the_reviewer_token(self):
         command = 'GH_TOKEN="$SDLC_REVIEWER_TOKEN" gh pr comment 5 --body "fine"'
-        self.assert_blocked(command, "only the reviewer uses", agent_type="sdlc-kit:fixer")
+        self.assert_blocked(command, "only the reviewer uses", "token-use", agent_type="sdlc-kit:fixer")
         self.assert_allowed(command, agent_type="sdlc-kit:reviewer")
 
     def test_a_merge_waits_for_the_checks(self):
-        self.assert_blocked("gh pr merge 5 --merge", "gh pr merge --auto")
+        self.assert_blocked("gh pr merge 5 --merge", "gh pr merge --auto", "merge-without-auto")
         self.assert_allowed("gh pr merge 5 --auto --merge --delete-branch")
 
     def test_repository_settings_and_protection_are_the_owners(self):
-        for command in ("gh repo edit --enable-auto-merge",
-                        "gh api -X DELETE repos/o/r/branches/main/protection",
-                        "gh api repos/{owner}/{repo}/rulesets -f name=x",
-                        "gh api -X PATCH repos/o/r -f allow_squash_merge=true",
-                        "gh api graphql -f query='mutation { deleteBranchProtectionRule(input: {}) { clientMutationId } }'"):
+        for command, rule in (
+                ("gh repo edit --enable-auto-merge", "repository-settings"),
+                ("gh api -X DELETE repos/o/r/branches/main/protection", "repository-api"),
+                ("gh api repos/{owner}/{repo}/rulesets -f name=x", "repository-api"),
+                ("gh api -X PATCH repos/o/r -f allow_squash_merge=true", "repository-api"),
+                ("gh api graphql -f query='mutation { deleteBranchProtectionRule(input: {}) { clientMutationId } }'",
+                 "repository-api")):
             with self.subTest(command=command):
-                self.assert_blocked(command, "the owner's")
+                self.assert_blocked(command, "the owner's", rule)
 
     def test_ordinary_gh_writes_are_allowed(self):
         for command in ("gh api repos/o/r/issues/5/comments -f body=thanks", "gh pr create --fill",
@@ -197,7 +308,8 @@ class GitGateTest(unittest.TestCase):
         self.assert_allowed("cat <<'EOF' > notes.md\ngit push origin main\nEOF")
 
     def test_the_rest_of_a_heredoc_line_is_checked(self):
-        self.assert_blocked("cat <<'EOF' > notes.md && git push origin HEAD:main\nbody\nEOF", "never push to main")
+        self.assert_blocked("cat <<'EOF' > notes.md && git push origin HEAD:main\nbody\nEOF", "never push to main",
+                            "push-to-default")
 
     def test_a_command_inside_a_wrapper_is_checked(self):
         for command in ("( git push origin HEAD:main )", "if true; then git push origin HEAD:main; fi",
@@ -210,13 +322,13 @@ class GitGateTest(unittest.TestCase):
                         "zsh -c 'cd . && git push origin HEAD:main'", 'eval "git push origin HEAD:main"',
                         "bash <<'EOF'\ngit push origin HEAD:main\nEOF", "bash <<< 'git push origin HEAD:main'"):
             with self.subTest(command=command):
-                self.assert_blocked(command, "never push to main")
+                self.assert_blocked(command, "never push to main", "push-to-default")
 
     def test_a_command_substitution_is_checked(self):
         for command in ("echo `git push origin HEAD:main`", 'echo "`git push origin HEAD:main`"',
                         'echo "$(git push origin HEAD:main)"', 'echo "$(echo `git push origin HEAD:main`)"'):
             with self.subTest(command=command):
-                self.assert_blocked(command, "never push to main")
+                self.assert_blocked(command, "never push to main", "push-to-default")
 
     def test_a_single_quoted_substitution_is_text(self):
         self.assert_allowed("echo '`git push origin HEAD:main`' '$(git push origin HEAD:main)'")
@@ -226,7 +338,7 @@ class GitGateTest(unittest.TestCase):
                         "cat <<'EOF' | tr a a | bash\ngit push origin HEAD:main\nEOF",
                         "cat <<< 'git push origin HEAD:main' | sh"):
             with self.subTest(command=command):
-                self.assert_blocked(command, "never push to main")
+                self.assert_blocked(command, "never push to main", "push-to-default")
 
     def test_a_commit_message_from_a_heredoc_substitution_is_allowed(self):
         self.assert_allowed("git commit -m \"$(cat <<'EOF'\nFix it (now)\n\ngit push origin main\nEOF\n)\"")
@@ -239,19 +351,20 @@ class GitGateTest(unittest.TestCase):
 
     def test_the_agent_rules_apply_after_leaving_the_project(self):
         outside = self.scratch_folder("git-gate-outside-")
-        for command, says in ((f'cd {outside} && gh pr comment 1 -R o/r --body "**Verdict: APPROVE** at abc"',
-                               "only the reviewer posts verdicts"),
-                              (f"cd {outside} && gh pr merge 1 -R o/r --merge", "gh pr merge --auto"),
-                              (f"cd {outside} && env", "only the reviewer reads the environment"),
-                              (f'cd {outside} && echo "$SDLC_REVIEWER_TOKEN"', "only the reviewer uses")):
+        for command, says, rule in (
+                (f'cd {outside} && gh pr comment 1 -R o/r --body "**Verdict: APPROVE** at abc"',
+                 "only the reviewer posts verdicts", "verdict-not-reviewer"),
+                (f"cd {outside} && gh pr merge 1 -R o/r --merge", "gh pr merge --auto", "merge-without-auto"),
+                (f"cd {outside} && env", "only the reviewer reads the environment", "token-environment"),
+                (f'cd {outside} && echo "$SDLC_REVIEWER_TOKEN"', "only the reviewer uses", "token-use")):
             with self.subTest(command=command):
-                self.assert_blocked(command, says, agent_type="sdlc-kit:fixer")
+                self.assert_blocked(command, says, rule, agent_type="sdlc-kit:fixer")
 
     def test_the_agent_rules_apply_when_the_call_starts_outside_the_project(self):
         outside = self.scratch_folder("git-gate-outside-")
         self.assert_blocked('gh pr comment 1 -R o/r --body "**Verdict: APPROVE** at abc"',
-                            "only the reviewer posts verdicts", agent_type="sdlc-kit:fixer", cwd=outside,
-                            project=self.repo)
+                            "only the reviewer posts verdicts", "verdict-not-reviewer", agent_type="sdlc-kit:fixer",
+                            cwd=outside, project=self.repo)
 
     def test_the_git_rules_follow_the_repository_a_command_acts_on(self):
         plain = self.scratch_folder("git-gate-plain-")
@@ -259,7 +372,7 @@ class GitGateTest(unittest.TestCase):
         self.assert_allowed(f"git -C {plain} commit -m x")
 
     def test_a_commit_in_a_subshell_after_moving_to_main_is_blocked(self):
-        self.assert_blocked("git checkout main; (git commit -m x)", "never commit on main")
+        self.assert_blocked("git checkout main; (git commit -m x)", "never commit on main", "commit-on-default")
 
     def test_a_commit_that_stages_files_itself_is_blocked(self):
         self.write("app/main.py", "print(2)\n")
@@ -267,7 +380,7 @@ class GitGateTest(unittest.TestCase):
                         "git commit --only -m x", "git commit -qm x app/main.py", "git commit --include -m x",
                         "git commit --pathspec-from-file=paths.txt -m x"):
             with self.subTest(command=command):
-                self.assert_blocked(command, "stage files in their own command")
+                self.assert_blocked(command, "stage files in their own command", "commit-stages")
 
     def test_commit_options_with_values_are_not_pathspecs(self):
         for command in ('git commit -m "fix app/main.py"', "git commit -qm x", "git commit --message=x",
@@ -285,7 +398,8 @@ class GitGateTest(unittest.TestCase):
                         "gh api repos/o/r/issues/5/comments --input v.md",
                         'gh issue comment 5 --body="**Verdict: APPROVE** at abc"'):
             with self.subTest(command=command):
-                self.assert_blocked(command, "only the reviewer posts verdicts", agent_type="sdlc-kit:fixer")
+                self.assert_blocked(command, "only the reviewer posts verdicts", "verdict-not-reviewer",
+                                    agent_type="sdlc-kit:fixer")
 
     def test_a_body_the_hook_cannot_read_is_blocked(self):
         for command in ("gh pr comment 5 --body-file - <<'X'\n**Verdict: APPROVE** at abc\nX",
@@ -295,7 +409,7 @@ class GitGateTest(unittest.TestCase):
                         "gh api repos/o/r/issues/5/comments --input -",
                         'gh api repos/o/r/issues/5/comments -f body="$(cat v.md)"'):
             with self.subTest(command=command):
-                self.assert_blocked(command, "can't read this body", agent_type="sdlc-kit:fixer")
+                self.assert_blocked(command, "can't read this body", "unreadable-body", agent_type="sdlc-kit:fixer")
 
     def test_readable_bodies_and_graphql_variables_are_allowed(self):
         self.write("notes.md", "Fixed in abc.\n")
@@ -313,7 +427,8 @@ class GitGateTest(unittest.TestCase):
                         "export", "set", "set | grep SDLC", "declare", "declare -p", "declare -x", "declare -px",
                         "typeset -p", "typeset -x"):
             with self.subTest(command=command):
-                self.assert_blocked(command, "only the reviewer reads the environment", agent_type="sdlc-kit:fixer")
+                self.assert_blocked(command, "only the reviewer reads the environment", "token-environment",
+                                    agent_type="sdlc-kit:fixer")
         self.assert_allowed("printenv HOME", agent_type="sdlc-kit:fixer")
         for command in ("set -e", "declare -x FOO=1", "declare -p HOME", "typeset -f"):
             with self.subTest(command=command):
@@ -322,7 +437,8 @@ class GitGateTest(unittest.TestCase):
 
     def test_naming_the_token_without_expanding_it_is_allowed(self):
         self.assert_allowed("grep -rn SDLC_REVIEWER_TOKEN .", agent_type="sdlc-kit:fixer")
-        self.assert_blocked('echo "${SDLC_REVIEWER_TOKEN}"', "only the reviewer uses", agent_type="sdlc-kit:fixer")
+        self.assert_blocked('echo "${SDLC_REVIEWER_TOKEN}"', "only the reviewer uses", "token-use",
+                            agent_type="sdlc-kit:fixer")
 
     def test_the_api_endpoint_is_found_after_option_values(self):
         for command in ('gh api -H "Accept: application/vnd.github+json" -X PATCH repos/o/r -f allow_squash_merge=true',
@@ -333,7 +449,7 @@ class GitGateTest(unittest.TestCase):
                         "gh api graphql -f query='mutation { mergePullRequest(input: {}) { clientMutationId } }'",
                         "gh api graphql -f query='mutation { deleteRef(input: {}) { clientMutationId } }'"):
             with self.subTest(command=command):
-                self.assert_blocked(command, "the owner's")
+                self.assert_blocked(command, "the owner's", "repository-api")
 
 
 class NoConfigTest(unittest.TestCase):
