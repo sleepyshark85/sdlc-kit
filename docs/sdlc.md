@@ -81,8 +81,10 @@ Four layers, as watching only the first two is how teams conclude AI made them f
 | Quality | Is what moved good? | Change failure rate (`Escaped from:` lines); rework rate; must-fixes by cause; mutation scores; open alerts |
 | People | What did it take from the owner? | Escalations (`owner-decision`); one merged PR per wave read in full, and what review missed |
 
-The kit's first version carries the conventions these measures need (cause labels, `Escaped from:`, the
-`owner-decision` label, size in the plan); the scorecard script that reads them is [planned](../README.md#planned).
+[`measuring.md`](measuring.md) details each measure: the phase and practice it belongs to, how it is collected, and
+what it tells the owner, the agent team's activity, cost and quality included. The kit's first version carries the
+conventions some of them need (cause labels, `Escaped from:`, the `owner-decision` label, size in the plan); the
+collectors still missing and the scorecard script that reads them are [planned](../README.md#planned).
 
 ## Changing the process
 
