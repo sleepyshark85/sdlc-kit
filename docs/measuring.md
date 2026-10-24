@@ -42,8 +42,9 @@ Status of each collector and metric:
 | C11 | Daily run on `main` | The full suite on `main` with default settings, and again with every in-progress flag on | A scheduled workflow (`daily.yml`) whose result is a check run on `main` | New; flags-on run Pending |
 | C12 | Escape records | `Escaped from: #n` and `Should have caught: <practice>` in a fix PR | C3's block, written by the fixer or developer | `Escaped from` Exists; the cause New |
 | C13 | Owner audit | Once per wave: a strict re-review of one random merged PR, its brief checked against `dispatch`'s brief checks, and the owner's own read of one PR in full, with the time it took | A reviewer dispatched by the lead on a merged PR; the owner records the findings and the time in the scorecard | New |
-| C14 | Code health | File and function sizes, duplication, analyzer suppressions, TODOs | A pack-provided command that writes JSON (the language decides how) | New |
+| C14 | Code health | File and function sizes, duplication, analyzer suppressions, TODOs; tests that fake a type of the project itself; parsers and validators without a property or fuzz test; each test's duration | A pack-provided command that writes JSON, and the pack's test report uploaded like `mutation-reports` (the language decides how) | New |
 | C15 | Dispatch log | Each agent the lead starts or resumes: time, agent id, role (agent type), model, the whole brief, and the agent's report when it returns (its outcome and `Live spend:` line) | A plugin hook after the Agent tool, appending one JSON line to `<session>/dispatches.jsonl`, beside the transcripts; read locally, never published | New |
+| C16 | Repository settings | Branch protection or rulesets on `main` (required checks, up to date, admins), merge settings, `security_and_analysis` (secret scanning, push protection) | `gh api` repository, branch protection and rulesets endpoints | New |
 
 ### The PR facts block
 
@@ -107,7 +108,7 @@ goes the wrong way. [Coverage](#coverage-every-practice) says which practice eac
 | BU5 | PRs without an *Assumptions* section; assumptions per PR | A | C1 | Missing: gaps filled silently. Many per PR: the spec is thin there |
 | BU6 | Agents past the context warnings, by role | E | C7 | Rising: briefs or tasks too large, or agents resumed too long |
 | BU7 | PRs whose facts block says more than one kind, or a mechanical PR without its command | A | C3, C1 | Any: changes mixed in one PR |
-| BU8 | Commits without the attribution line; PRs merged without the owner able to name who approved | A | C4, C1 | Any: AI authorship hidden |
+| BU8 | PR descriptions without the attribution line | A | C1 | Any: AI authorship hidden |
 | BU9 | Changed tests that fake something inside the project; tests over a second | A | C14, C9 | Any: tests check the fake, not the code |
 | BU10 | Parsers and validators without a property or fuzz test | A | C14 | Any: inputs no example covers |
 | BU11 | New tests that kill no mutant and pin no criterion | A | C9, C5 | Any: a test that costs time and checks nothing new |
@@ -135,7 +136,7 @@ goes the wrong way. [Coverage](#coverage-every-practice) says which practice eac
 | MG2 | Merges not made by auto-merge; merges that are not merge commits | A | C1 (timeline), C4 | Any: a merge around the gate |
 | MG3 | CI duration and failure rate per check; docs-only PRs that ran a build | E, A | C9, C1 | Slow or failing often: verification capacity spent badly. A docs-only build: the change detector missed |
 | MG4 | Re-run jobs (attempt above 1); flaky tests found by the weekly run | A, E | C9 | Any re-run: a flake was retried instead of fixed |
-| MG5 | Required checks or protection rules missing from `main` against `docs/conventions.md` and `docs/decisions.md` | A | `gh api` branch protection (C1), C5 | Any: a setting drifted. The owner reruns `setup-repo.sh` |
+| MG5 | Required checks, protection rules or security settings missing against `docs/conventions.md`, `docs/decisions.md` and `setup-repo.sh` | A | C16, C5 | Any: a setting drifted. The owner reruns `setup-repo.sh` |
 
 ### 6. On `main`: what merged
 
@@ -162,7 +163,7 @@ goes the wrong way. [Coverage](#coverage-every-practice) says which practice eac
 | LN2 | The owner's load: escalations, audit time, the owner's own commits | E | C1, C13, C4 | Rising: the process pushes decisions back to the owner |
 | LN3 | Each process change's metric, before and after (the next one or two waves); process PRs without a `metric` | E, A | C3, earlier scorecards | No movement: revert it. A Trial practice that moved its metric becomes Guided or Enforced |
 | LN4 | The kit's version during the wave | A | No collector: the scorecard reads the installed plugin's `plugin.json` | Attributes a change in the numbers to a kit release |
-| LN5 | Live API spend per wave and per role, against each brief's cap | E, A | C15 (the reports' `Live spend:`) | Over a cap: an agent spent past its brief. Rising: live calls replace tests with fakes |
+| LN5 | Live API spend per wave and per role, against each brief's cap | E, A | C15 (the reports' `Live spend:`) | Over a cap: an agent spent past its brief. Rising: live calls replace tests that would use a fake |
 
 ## The agent team
 
@@ -234,7 +235,7 @@ Each row of the README's table, with its adherence and effect metrics, or why it
 | Decision records | SP6 | MN5 (`design` escapes) |
 | Language-neutral architecture | SP7 | None: its gain (one design for any implementation) shows only when a second language arrives |
 | Contract first at task seams | PL7 | RV2 (`[contract]`) |
-| Fitness functions | None: a dependency test is code the reviewer checks once; MN12 catches it failing | MN5 (`design` escapes) |
+| Fitness functions | None: a dependency test is code the reviewer checks once; MG3 counts its failures on PRs | MN5 (`design` escapes) |
 | Threat model, LLM threats included | SP5 | MN5 (`threat-model` escapes); MN6 |
 
 ### Coding
@@ -247,8 +248,8 @@ Each row of the README's table, with its adherence and effect metrics, or why it
 | The developer self-checks before review | BU2 | RV1 |
 | The code quality bar | RV2 (raised) | RV1; MN10; MN4 |
 | Least privilege for agents | BU4; AG4 | MN5 (`none` escapes caused by an agent's action) |
-| Unfinished work off on `main` (with release flags and old-code techniques, #4) | RV6; MN9 | MN1; PL8 |
-| AI authorship visible, a person accountable | BU8 | None: accountability shows only when something escapes, in MN5's owner |
+| Unfinished work merges dark; one switch-on task releases it (with #4: off on `main`, release flags, old code reshaped first) | RV6; MN9 | MN1; PL8 |
+| AI authorship visible, a person accountable | BU8 | None: accountability shows only when something escapes, and MN5 traces each escape to its PR |
 
 ### Security
 
@@ -256,7 +257,7 @@ Each row of the README's table, with its adherence and effect metrics, or why it
 |---|---|---|
 | Static analysis on every PR and weekly | MG5 (the check required) | MN6 |
 | Dependency vulnerabilities | MG5 | MN6 |
-| Secret scanning with push protection | MN7 (its check) | MN6 (secret alerts) |
+| Secret scanning with push protection | MG5 (`security_and_analysis`) | MN6 (secret alerts) |
 | New dependencies justified | SP6 | MN6 (Dependabot alerts on them) |
 | Least-privilege workflow tokens | MN12 (workflow rules) | MN7 (token permissions) |
 | Actions pinned by commit sha, kept current | MN12 (workflow rules) | MN7 (pinned dependencies); MN6 |
@@ -270,7 +271,7 @@ Each row of the README's table, with its adherence and effect metrics, or why it
 |---|---|---|
 | Only boundaries faked; fast, deterministic tests | BU9 | MG4; MN5 (`tests` escapes) |
 | Mutation testing on each PR's changed code | BU2 | MN8 |
-| Survivors visible on the PR | MG3 (the summary step) | BU2 |
+| Survivors visible on the PR | None: the summary step is part of the mutation job, which MG3 counts | BU2 |
 | Full mutation runs held to a floor | MG3 (the weekly job) | MN8 |
 | Property and fuzz tests for parsers and validators | BU10 | MN5 (`tests` escapes in parsers) |
 | Generated tests kept only if they kill a mutant or pin a criterion | BU11 | MG3 (suite time); MN8 |
