@@ -1,5 +1,5 @@
-<!-- Adapted from arc42 (https://arc42.org) by Gernot Starke and Peter Hruschka, licensed under CC BY-SA 4.0
-     (https://creativecommons.org/licenses/by-sa/4.0/). The content a project writes into it is its own. -->
+<!-- Adapted from arc42 (https://arc42.org), © Dr. Peter Hruschka, Dr. Gernot Starke and contributors, licensed
+     under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). What a project writes into it is its own. -->
 # Crosscutting concepts
 
 The rules every subsystem keeps (arc42 §8), language-neutral.
