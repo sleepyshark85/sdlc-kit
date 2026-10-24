@@ -17,8 +17,9 @@ def requirement_ids(root):
     the files of docs/requirements/. A project without REQUIREMENTS.md (deleted by a split, or never written) is not an
     error; any other file that can't be read is."""
     paths = glob.glob(os.path.join(root, "docs", "requirements", "*.md"))
-    if os.path.isfile(os.path.join(root, "REQUIREMENTS.md")):
-        paths.append(os.path.join(root, "REQUIREMENTS.md"))
+    short_form = os.path.join(root, "REQUIREMENTS.md")
+    if os.path.isfile(short_form):
+        paths.append(short_form)
     found = set()
     for path in paths:
         with open(path, encoding="utf-8") as file:
