@@ -16,6 +16,10 @@ How .NET code is written here, on top of `docs/conventions.md`. The code lives i
 - **Each project registers its own services** (`Add…` extension methods on `IServiceCollection`); the application
   composes them in one place, and that composition is the switch for dark work: an unfinished feature's `Add…` call
   arrives with its switch-on task.
+- **Release flags** are `bool` properties of one `Flags` options class bound from the `Flags` configuration section,
+  each `false` by default and named as in `docs/flags.md`. A flag is read once, at the seam the preparatory refactor
+  made (usually the composition root choosing an implementation), never deep in the code. Tests set it through
+  configuration (`Flags:<Name>`) and cover both values.
 - **Async all the way,** with a `CancellationToken` on every I/O path; `TimeProvider` for time, never `DateTime.Now`.
 - **Packages are versioned centrally** in `Directory.Packages.props`, restored from `packages.lock.json`; a new one
   needs its line in `docs/decisions.md`.

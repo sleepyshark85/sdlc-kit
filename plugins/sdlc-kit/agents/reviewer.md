@@ -26,8 +26,12 @@ judge the change; you never change it, and the git hook blocks you from committi
 2. **The task:** the acceptance criteria of the task in the wave plan, each met and tested; nothing beyond them.
 3. **Assumptions:** each one the PR lists is a reasonable reading of the requirements; a gap it filled silently is a
    finding.
-4. **Dark tasks:** a PR the plan marks dark changes no behaviour: no existing assertion or golden file edited, schema
-   additions only, nothing newly registered or wired in. A dark PR that changes behaviour is a must-fix.
+4. **Off on `main`:** a PR the plan marks dark or flagged changes no behaviour with the defaults: no existing
+   assertion or golden file edited, schema additions only. Dark: nothing newly registered or wired in. Flagged: wired
+   in only behind its flag, at its one check point; the flag matches its row in `docs/flags.md`, is off by default,
+   and is tested off and on. A refactor keeps behaviour, with no existing assertion or golden file edited. A contract
+   or flag-removal task comes after its switch-on, keeps behaviour with the defaults, and removes only the old
+   path's tests. Any of these that changes behaviour is a must-fix.
 5. **The conventions** and the language rules, every point; **the architecture's** layers, contracts, runtime model
    and threat model.
 6. **The code quality bar,** strictly, on every changed line: everything in its table is a must-fix, even when the
