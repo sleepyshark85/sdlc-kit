@@ -25,8 +25,8 @@ import sys
 ALLOWED_AUTHORS = {"OWNER", "MEMBER", "COLLABORATOR"}
 VERDICT_PREFIX = "**Verdict:"
 APPROVAL = re.compile(r"\*\*Verdict: APPROVE\*\* at ([0-9a-f]{40})")
-# merge-tree --write-tree, which replays a merge without a worktree, arrived in this Git release.
-MERGE_TREE_GIT = "2.38"
+# The oldest Git with every command the gate uses: `merge-tree --write-tree` (2.38) and `patch-id --verbatim` (2.39).
+OLDEST_GIT = (2, 39)
 
 
 def git(*args):
@@ -105,8 +105,7 @@ def replay(commit, onto):
     merge = subprocess.run(["git", "merge-tree", "--write-tree", onto, commit], capture_output=True, text=True)
     if merge.returncode == 1:
         return None
-    if merge.returncode != 0:
-        sys.exit(f"git merge-tree --write-tree failed; it needs Git {MERGE_TREE_GIT} or later: {merge.stderr.strip()}")
+    merge.check_returncode()
     return merge.stdout.split()[0]
 
 
@@ -116,7 +115,16 @@ def patch_id(merge_base, commit):
     return subprocess.run(["git", "patch-id", "--verbatim"], input=diff, capture_output=True, check=True).stdout
 
 
+def too_old(version):
+    """Whether `git version`'s output names a Git older than OLDEST_GIT."""
+    found = re.search(r"(\d+)\.(\d+)", version)
+    return found is not None and (int(found.group(1)), int(found.group(2))) < OLDEST_GIT
+
+
 def main():
+    version = git("version").strip()
+    if too_old(version):
+        sys.exit(f"{version} is too old: the review gate needs Git {'.'.join(map(str, OLDEST_GIT))} or later.")
     head, base, default_branch = sys.argv[1:]
     reviewers = frozenset(login.strip() for login in os.environ.get("REVIEWERS", "").split(",") if login.strip())
     state, description = decide(json.load(sys.stdin), head, base, default_branch, reviewers)

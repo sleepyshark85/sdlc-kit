@@ -332,5 +332,23 @@ class ReviewGateImportTest(unittest.TestCase):
         self.assertEqual((output.getvalue(), module.VERDICT_PREFIX), ("", "**Verdict:"))
 
 
+
+class GitVersionTest(unittest.TestCase):
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location("review_gate", GATE)
+        self.gate = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.gate)
+
+    def test_a_git_older_than_the_gate_needs_is_too_old(self):
+        self.assertTrue(self.gate.too_old("git version 2.38.1"))
+        self.assertTrue(self.gate.too_old("git version 2.31.1.windows.1"))
+        self.assertTrue(self.gate.too_old("git version 1.99.0"))
+
+    def test_the_oldest_git_the_gate_needs_and_newer_ones_are_not(self):
+        self.assertFalse(self.gate.too_old("git version 2.39.0"))
+        self.assertFalse(self.gate.too_old("git version 2.47.1 (Apple Git-154)"))
+        self.assertFalse(self.gate.too_old("git version 3.0.0"))
+
+
 if __name__ == "__main__":
     unittest.main()
