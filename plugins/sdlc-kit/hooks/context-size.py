@@ -19,6 +19,7 @@ THRESHOLDS = (150_000, 300_000)
 CHUNK = 64 * 1024
 TAIL_LIMIT = 8 * 1024 * 1024
 SIZES = "context-sizes"
+SUBAGENTS = "subagents"
 MAIN = "main"
 
 
@@ -101,7 +102,7 @@ def now():
 def on_tool_use(payload, session):
     """Logs the agent's size; returns the hook output that warns it, or None."""
     agent = payload.get("agent_id")
-    transcript = os.path.join(session, "subagents", f"agent-{agent}.jsonl") if agent else payload["transcript_path"]
+    transcript = os.path.join(session, SUBAGENTS, f"agent-{agent}.jsonl") if agent else payload["transcript_path"]
     tokens = context_size(transcript)
     if tokens is None:
         return None

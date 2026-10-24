@@ -188,7 +188,7 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | A cause on every must-fix | Rework measured by cause, by script | `reviewer` *The verdict*; conventions *Code quality bar* | Guided |
 | Escaped defects traced to their PR | Change failure rate | `fixer` (`Escaped from: #n`) | Guided |
 | Scorecard: cost, flow, quality and people per wave | Throughput alone inflates with AI | [`docs/measuring.md`](docs/measuring.md) (the metrics and collectors); the conventions above; the collectors and the script are planned | Planned |
-| The agent team measured by role and model: activity, cost, quality | Choosing each role's model and instructions on evidence | [`docs/measuring.md`](docs/measuring.md#the-agent-team); `team-report` skill and `scripts/agent_report.py` (activity and cost: AG1, AG2, AG4, AG5, AG7, AG8); quality by role comes with the scorecard | Reported (activity, cost); Planned (quality) |
+| The agent team measured by role and model: activity, cost, quality | Choosing each role's model and instructions on evidence | [`docs/measuring.md`](docs/measuring.md#the-agent-team); the owner's `team-report` skill and `scripts/agent_report.py` (activity and cost: AG1, AG5, AG7; AG2, AG4, AG8 in part), on demand; quality by role comes with the scorecard | Trial (activity, cost); Planned (quality) |
 
 ### 8. Products that run a model
 

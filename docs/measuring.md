@@ -169,8 +169,9 @@ goes the wrong way. [Coverage](#coverage-every-practice) says which practice eac
 The same data, cut by **agent role** (lead, developer, fixer, reviewer) and by **model**, to see how the team
 works, what each role costs and how good its output is. The dispatch log (C15) ties each agent to its task and PR;
 its transcript (C8, `<session>/subagents/agent-<id>.jsonl`) gives its activity and cost; GitHub (C1, C2, C12) gives
-the quality of what it produced. The `team-report` skill (`scripts/agent_report.py`) reports AG1, AG2, AG4, AG5, AG7
-and AG8 today; the rest come with the scorecard.
+the quality of what it produced. The owner's `team-report` skill (`scripts/agent_report.py`) reports AG1, AG5 and AG7
+today, and AG2 (no turns), AG4 (no permission denials apart from tool errors) and AG8 in part; the rest come with
+the scorecard.
 
 ### Activity
 
@@ -188,7 +189,7 @@ and AG8 today; the rest come with the scorecard.
 | AG5 | Tokens (input, output, cache read, cache write) and cost per dispatch | Role, model | C8 | The cost table behind LN1 |
 | AG6 | Cost per merged PR and per feature switched on, split by role | Role | C8, C15, C1 | Which role a PR's cost goes to. Review costing more than building is expected; a lead's share rising is not |
 | AG7 | Cache read share of input tokens | Role | C8 | Low: briefs or contexts change in ways that defeat prompt caching |
-| AG8 | Peak context per dispatch; dispatches past the warnings | Role | C7 | Read with BU6: large contexts cost on every step and recall less |
+| AG8 | Peak context per dispatch; dispatches past the warnings | Role | C8 (the warnings' thresholds from C7's hook) | Read with BU6: large contexts cost on every step and recall less |
 
 ### Quality of each role's output
 
