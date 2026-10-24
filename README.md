@@ -7,6 +7,8 @@ gate, repository settings), with language packs. Its practices come from the
 practice (DORA, NIST SSDF, OWASP, OpenSSF).
 
 - **The process:** [`docs/sdlc.md`](docs/sdlc.md): the premise, roles, flow, guards and measures.
+- **What is measured, and how:** [`docs/measuring.md`](docs/measuring.md): each practice's metrics by phase, their
+  collectors, and the agent team's activity, cost and quality.
 - **The rules agents follow:** the template's [`docs/conventions.md`](plugins/sdlc-kit/template/docs/conventions.md).
 
 ## Getting started
@@ -26,6 +28,7 @@ Prerequisites: Claude Code, the GitHub CLI, Python 3.11 or later, and each pack'
 ```text
 .claude-plugin/marketplace.json     the marketplace: this repository serves the plugin below
 docs/sdlc.md                        the SDLC: premise, roles, flow, guards, measures, how the process changes
+docs/measuring.md                   every metric by phase and practice, its collector, and what it tells
 plugins/sdlc-kit/
   .claude-plugin/plugin.json        the plugin's name and version; projects update with the plugin
   agents/
@@ -176,7 +179,8 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | The lead reads reports, not diffs | The lead's context is the costliest | `dispatch` *Lead's routine*; `agent-rules.md` *Report* | Guided |
 | A cause on every must-fix | Rework measured by cause, by script | `reviewer` *The verdict*; conventions *Code quality bar* | Guided |
 | Escaped defects traced to their PR | Change failure rate | `fixer` (`Escaped from: #n`) | Guided |
-| Scorecard: cost, flow, quality and people per wave | Throughput alone inflates with AI | The conventions above; the script is planned | Planned |
+| Scorecard: cost, flow, quality and people per wave | Throughput alone inflates with AI | [`docs/measuring.md`](docs/measuring.md) (the metrics and collectors); the conventions above; the collectors and the script are planned | Planned |
+| The agent team measured by role and model: activity, cost, quality | Choosing each role's model and instructions on evidence | [`docs/measuring.md`](docs/measuring.md#the-agent-team); the dispatch log and the script are planned | Planned |
 
 ### 8. Products that run a model
 
@@ -187,9 +191,8 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 
 ## Planned
 
-- **The scorecard:** a script that reads GitHub and the session transcripts per wave (PR size, rounds, must-fixes by
-  cause, change failure and rework rates, tokens by role, escalations): a port of Officina's `sdlc-metrics.py` and
-  `agent-usage.py`, made generic.
+- **The scorecard:** the collectors [`docs/measuring.md`](docs/measuring.md#building-it) lists as new, then a script
+  that reads them per wave: a port of Officina's `sdlc-metrics.py` and `agent-usage.py`, made generic.
 - **A `sync` skill** that shows how a project's copied template files differ from the kit's current version.
 - **More packs:** Go and Ruby (from Officina's implementations), with their mutation tools.
 - **Releases:** semantic versions, API compatibility checks, SBOM and provenance, per pack.
