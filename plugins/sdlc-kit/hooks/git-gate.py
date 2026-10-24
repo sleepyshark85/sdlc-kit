@@ -22,7 +22,10 @@ protection and the review gate are the server-side backstop.
 Checks come from `.sdlc/checks.toml`: before a commit that stages a component's code, its `before_commit` commands;
 before a push that changes the component, its `before_push` commands. Which paths a component owns is decided by the
 template's `.sdlc/sdlc_paths.py`, which CI's change detector shares. CI runs the same checks; these find a failure
-before the commit or push instead of after it."""
+before the commit or push instead of after it.
+
+Each block is logged beside the session's transcripts (<session>/git-gate/<agent>.jsonl: time, agent type and the
+reason's first line, never the command) for the agent-team report in docs/measuring.md."""
 import importlib.util
 import json
 import os
@@ -31,6 +34,7 @@ import shlex
 import subprocess
 import sys
 import tomllib
+from datetime import datetime, timezone
 
 HOOKS = os.path.dirname(os.path.abspath(__file__))
 SDLC_PATHS = os.path.join(os.path.dirname(HOOKS), "template", ".sdlc", "sdlc_paths.py")
@@ -39,6 +43,10 @@ PREFIXES = ("feature/", "fix/", "refactor/", "docs/", "chore/", "test/")
 REVIEWER_TOKEN = "SDLC_REVIEWER_TOKEN"
 TOKEN_EXPANSION = re.compile(r"\$\{?" + REVIEWER_TOKEN + r"\b")
 VERDICT = "**Verdict:"
+# Each block is logged beside the session's transcripts, as <session>/git-gate/<agent>.jsonl, for the agent-team
+# report: its rule (the reason's first line), never the command, which may hold a secret.
+BLOCK_LOG = "git-gate"
+MAIN = "main"
 
 SEPARATORS = set(";&|\n()")
 PUNCTUATION = "".join(sorted(SEPARATORS)) + "<>"
@@ -122,9 +130,26 @@ def git(cwd, *args):
     return run.stdout.strip() if run.returncode == 0 else ""
 
 
+class Blocked(Exception):
+    """A command the hook refuses, with the reason shown to the agent."""
+
+
 def block(reason):
-    print(reason, file=sys.stderr)
-    sys.exit(2)
+    raise Blocked(reason)
+
+
+def log_block(payload, reason):
+    """Appends the block to the session's log; a payload without a transcript (not from Claude Code) logs nothing."""
+    transcript = payload.get("transcript_path")
+    if not transcript:
+        return
+    agent = payload.get("agent_id") or MAIN
+    path = os.path.join(os.path.splitext(transcript)[0], BLOCK_LOG, f"{agent}.jsonl")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    entry = {"time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+             "agent_type": payload.get("agent_type") or MAIN, "rule": reason.split("\n", 1)[0]}
+    with open(path, "a", encoding="utf-8") as file:
+        file.write(json.dumps(entry) + "\n")
 
 
 def resolve(cwd, path):
@@ -633,10 +658,15 @@ def main():
     text = payload.get("tool_input", {}).get("command", "")
     project = os.environ.get("CLAUDE_PROJECT_DIR")
     line = Line(payload.get("cwd") or project or ".", payload.get("agent_type"), project)
-    if not line.reviewer and TOKEN_EXPANSION.search(text) and line.opted_in:
-        block("Blocked: only the reviewer uses the reviewer's token.")
-    line.evaluate(text)
-    line.finish()
+    try:
+        if not line.reviewer and TOKEN_EXPANSION.search(text) and line.opted_in:
+            block("Blocked: only the reviewer uses the reviewer's token.")
+        line.evaluate(text)
+        line.finish()
+    except Blocked as blocked:
+        log_block(payload, str(blocked))
+        print(blocked, file=sys.stderr)
+        sys.exit(2)
 
 
 if __name__ == "__main__":

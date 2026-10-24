@@ -97,6 +97,47 @@ class GitGateTest(unittest.TestCase):
             with self.subTest(command=command):
                 self.assert_blocked(command, "main")
 
+    def logged_blocks(self, command, **payload):
+        """Runs the hook as a session with a transcript, and returns the blocks it logged, by log file."""
+        scratch = tempfile.TemporaryDirectory(prefix="git-gate-session-")
+        self.addCleanup(scratch.cleanup)
+        session = os.path.join(scratch.name, "session")
+        run_hook({"tool_input": {"command": command}, "cwd": self.repo, "transcript_path": session + ".jsonl",
+                  **payload})
+        folder = os.path.join(session, "git-gate")
+        if not os.path.isdir(folder):
+            return {}
+        logs = {}
+        for name in os.listdir(folder):
+            with open(os.path.join(folder, name), encoding="utf-8") as file:
+                logs[name] = [json.loads(line) for line in file]
+        return logs
+
+    def test_a_block_is_logged_with_its_rule_and_agent_but_not_the_command(self):
+        logs = self.logged_blocks("git push --force origin feature/x", agent_id="a1", agent_type="sdlc-kit:developer")
+
+        self.assertEqual(["a1.jsonl"], list(logs))
+        [entry] = logs["a1.jsonl"]
+        self.assertEqual(("sdlc-kit:developer", "Blocked: never force-push; add commits, and merge the base instead of "
+                          "rebasing."), (entry["agent_type"], entry["rule"]))
+        self.assertNotIn("feature/x", json.dumps(entry))
+
+    def test_the_main_session_logs_as_main(self):
+        self.git("switch", "--quiet", "main")
+
+        self.assertEqual(["main.jsonl"], list(self.logged_blocks("git commit -m x")))
+
+    def test_an_allowed_command_logs_nothing(self):
+        self.assertEqual({}, self.logged_blocks("git status"))
+
+    def test_a_multi_line_reason_logs_its_first_line(self):
+        self.write("web/main.js", "2\n")
+        self.git("add", "web/main.js")
+
+        [entry] = self.logged_blocks("git commit -m x")["main.jsonl"]
+
+        self.assertNotIn("\n", entry["rule"])
+
     def test_a_force_push_is_blocked(self):
         for command in ("git push -f", "git push --force-with-lease origin feature/x", "git push origin +feature/x"):
             with self.subTest(command=command):
