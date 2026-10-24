@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime
 
 HOOK = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "git-gate.py")
 BLOCKED = 2
@@ -97,46 +98,91 @@ class GitGateTest(unittest.TestCase):
             with self.subTest(command=command):
                 self.assert_blocked(command, "main")
 
-    def logged_blocks(self, command, **payload):
-        """Runs the hook as a session with a transcript, and returns the blocks it logged, by log file."""
+    def session(self):
+        """A scratch session's path, without its .jsonl, as Claude Code passes it in transcript_path."""
         scratch = tempfile.TemporaryDirectory(prefix="git-gate-session-")
         self.addCleanup(scratch.cleanup)
-        session = os.path.join(scratch.name, "session")
-        run_hook({"tool_input": {"command": command}, "cwd": self.repo, "transcript_path": session + ".jsonl",
-                  **payload})
+        return os.path.join(scratch.name, "session")
+
+    def run_in(self, session, command, **payload):
+        return run_hook({"tool_input": {"command": command}, "cwd": self.repo, "transcript_path": session + ".jsonl",
+                         **payload})
+
+    def logs(self, session):
+        """The blocks the session logged, by log file."""
         folder = os.path.join(session, "git-gate")
-        if not os.path.isdir(folder):
-            return {}
         logs = {}
-        for name in os.listdir(folder):
+        for name in os.listdir(folder) if os.path.isdir(folder) else []:
             with open(os.path.join(folder, name), encoding="utf-8") as file:
                 logs[name] = [json.loads(line) for line in file]
         return logs
 
-    def test_a_block_is_logged_with_its_rule_and_agent_but_not_the_command(self):
-        logs = self.logged_blocks("git push --force origin feature/x", agent_id="a1", agent_type="sdlc-kit:developer")
+    def test_a_block_logs_its_rule_agent_and_time(self):
+        session = self.session()
 
-        self.assertEqual(["a1.jsonl"], list(logs))
-        [entry] = logs["a1.jsonl"]
-        self.assertEqual(("sdlc-kit:developer", "Blocked: never force-push; add commits, and merge the base instead of "
-                          "rebasing."), (entry["agent_type"], entry["rule"]))
-        self.assertNotIn("feature/x", json.dumps(entry))
+        self.run_in(session, "git push --force origin feature/x", agent_id="a1", agent_type="sdlc-kit:developer")
+
+        [entry] = self.logs(session)["a1.jsonl"]
+        time = entry.pop("time")
+        self.assertEqual({"agent_type": "sdlc-kit:developer", "rule": "force-push"}, entry)
+        datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ")
 
     def test_the_main_session_logs_as_main(self):
         self.git("switch", "--quiet", "main")
+        session = self.session()
 
-        self.assertEqual(["main.jsonl"], list(self.logged_blocks("git commit -m x")))
+        self.run_in(session, "git commit -m x")
+
+        [entry] = self.logs(session)["main.jsonl"]
+        self.assertEqual(("main", "commit-on-default"), (entry["agent_type"], entry["rule"]))
+
+    def test_each_block_of_a_session_adds_a_line(self):
+        session = self.session()
+
+        self.run_in(session, "git push --force origin feature/x")
+        self.run_in(session, "git push origin main")
+
+        rules = [entry["rule"] for entry in self.logs(session)["main.jsonl"]]
+        self.assertEqual(["force-push", "push-to-default"], rules)
+
+    def test_the_log_holds_a_fixed_rule_and_no_command_text(self):
+        session = self.session()
+
+        self.run_in(session, 'gh pr comment 1 --body "deploy key hunter2-SECRET $X"')
+        self.run_in(session, "git switch --create bad/one")
+        self.run_in(session, "git switch --create bad/two")
+
+        entries = self.logs(session)["main.jsonl"]
+        self.assertEqual(["unreadable-body", "branch-prefix", "branch-prefix"], [entry["rule"] for entry in entries])
+        for text in ("hunter2", "bad/one", "bad/two"):
+            self.assertNotIn(text, json.dumps(entries))
 
     def test_an_allowed_command_logs_nothing(self):
-        self.assertEqual({}, self.logged_blocks("git status"))
+        session = self.session()
 
-    def test_a_multi_line_reason_logs_its_first_line(self):
-        self.write("web/main.js", "2\n")
-        self.git("add", "web/main.js")
+        self.run_in(session, "git status")
 
-        [entry] = self.logged_blocks("git commit -m x")["main.jsonl"]
+        self.assertEqual({}, self.logs(session))
 
-        self.assertNotIn("\n", entry["rule"])
+    def test_a_malformed_config_still_blocks_and_is_logged(self):
+        self.write(".sdlc/checks.toml", "this is = = not toml\n")
+        session = self.session()
+
+        run = self.run_in(session, "git status")
+
+        self.assertEqual(BLOCKED, run.returncode, run.stderr)
+        self.assertIn("does not parse", run.stderr)
+        self.assertEqual("config-parse", self.logs(session)["main.jsonl"][0]["rule"])
+
+    def test_a_log_that_cannot_be_written_still_blocks(self):
+        not_a_folder = os.path.join(self.session() + "-file")
+        with open(not_a_folder, "w", encoding="utf-8") as file:
+            file.write("a file where the session folder's parent should be\n")
+
+        run = self.run_in(os.path.join(not_a_folder, "session"), "git push --force origin feature/x")
+
+        self.assertEqual(BLOCKED, run.returncode, run.stderr)
+        self.assertIn("never force-push", run.stderr)
 
     def test_a_force_push_is_blocked(self):
         for command in ("git push -f", "git push --force-with-lease origin feature/x", "git push origin +feature/x"):
