@@ -34,7 +34,8 @@ the files your brief names in `docs/requirements/` and `docs/architecture/`).
    on purpose.
 8. Push and open the PR with a description the reviewer can verify: what changed and why; **Assumptions** (each
    point the spec left open, your choice and why, or "none"); for a dark or flagged task, "behaviour-neutral with
-   defaults" and its evidence; what you checked and how. End it with the attribution line the session gives.
+   defaults" and its evidence; what you checked and how. End it with the attribution line the session gives, then
+   the facts block (`docs/conventions.md`).
 9. Stop there and report: the lead dispatches the reviewer and merges.
 
 Report in the short format of the `dispatch` skill's `agent-rules.md` (*Report*); the detail goes in the PR.

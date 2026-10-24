@@ -41,7 +41,9 @@ judge the change; you never change it, and the git hook blocks you from committi
 8. **Docs:** the architecture names no types or APIs; traceability, design notes and README match the change. A
    split (`split-docs`) moves text whole: every line of the old file arrives, IDs unchanged, rewording only where
    the PR lists it.
-9. **The PR's claims:** numbers, test results and "checked" statements match what you can verify.
+9. **The PR's claims:** numbers, test results and "checked" statements match what you can verify; the facts block
+   matches the diff and the plan (its task, kind, size and criteria), and a fix of merged code names `escaped-from`
+   and `should-have-caught`.
 10. **CI:** `gh pr checks <n>`, and the logs of any check that failed or that the PR adds or changes.
 
 ## The verdict
@@ -61,8 +63,10 @@ or `**Verdict: CHANGES REQUESTED** at <sha>` followed by the findings. Get the s
 of the base into the PR carries your approval over; read the `review` status first.
 
 Findings: **Must fix**, each with one cause label (`[tests]`, `[quality]`, `[bug]`, `[contract]`, `[ac]`,
-`[process]`), a file and line, and a concrete fix; then **Nits** (true trivia only); then **Checked and fine**. Approve
-when nothing must be fixed; nits alone never block.
+`[process]`), a file and line, and a concrete fix, and after the label `(late)` for one an earlier round missed and
+`(claim)` for a claim in the PR the code refutes; a must-fix you drop after the developer disputes it is listed in
+the next verdict as `Withdrawn: <its number and label>`; then **Nits** (true trivia only); then **Checked and
+fine**. Approve when nothing must be fixed; nits alone never block.
 
 A PR gets at most three rounds. If the third still has a must-fix, say so in the verdict and stop: the owner decides.
 

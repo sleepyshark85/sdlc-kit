@@ -29,9 +29,9 @@ Status of each collector and metric:
 | ID | Collector | What it records | How | Status |
 |---|---|---|---|---|
 | C1 | Pull requests | Branch, title, description, labels, changed files and lines, opened, merged and closed times, merged by, and the timeline's auto-merge events | `gh api` (REST, GraphQL and the timeline) | Exists |
-| C2 | Verdict comments | Verdict, the head sha it names, author; each must-fix with its cause label and its `late`, `claim` or `withdrawn` marker; the owner's ruling on a round-3 PR. A round is counted from the order of verdicts | `gh api` issue comments, parsed by the format in `agents/reviewer.md` | Exists; the markers and the ruling New |
-| C3 | PR facts block | The facts only the author knows (below) | Written by the developer or fixer when it opens the PR; checked by the reviewer | New |
-| C4 | Git history | Commits, their authors and times, merge commits, `Conflicts:` trailers, when a line (a requirement ID, a decision) first appeared, test names | `git log`, `git blame`, `git show`, `git grep` | Exists; the trailer New |
+| C2 | Verdict comments | Verdict, the head sha it names, author; each must-fix with its cause label and its `late`, `claim` or `withdrawn` marker; the owner's ruling on a round-3 PR. A round is counted from the order of verdicts | `gh api` issue comments, parsed by the formats in `agents/reviewer.md` (*The verdict*) and the `dispatch` skill (*Round 3 to the owner*) | Exists |
+| C3 | PR facts block | The facts only the author knows (below) | Written by the developer or fixer when it opens the PR, in the format of the template's `docs/conventions.md`; checked by the reviewer | Exists |
+| C4 | Git history | Commits, their authors and times, merge commits, `Conflicts:` trailers, when a line (a requirement ID, a decision) first appeared, test names | `git log`, `git blame`, `git show`, `git grep`; the trailer is written by the merge-check brief | Exists |
 | C5 | The project's docs | Requirements, numbered criteria, open questions, traceability, plans and their `Reads:` lines, decisions, mutation floors, the flag registry | Parsed from Markdown tables (`REQUIREMENTS.md` or `docs/requirements/`, `docs/plan/`, `docs/decisions.md`, `docs/flags.md`) | Exists |
 | C6 | Hook block log | Each action `git-gate.py` blocked: time, session, agent, rule. Never the command: it may hold a secret | One JSON line per block in `<session>/git-gate/<agent>.jsonl` (time, agent type, and the rule as a fixed key such as `force-push`), beside the transcripts, as `context-size.py` does | Exists |
 | C7 | Context-size log | Each agent's context size after each tool call; the warnings are derived from the hook's thresholds | `context-size.py` → `<session>/context-sizes/<agent>.jsonl` (time, agent type, tokens) | Exists |
@@ -39,31 +39,19 @@ Status of each collector and metric:
 | C9 | CI runs | Each check's conclusion, duration and attempt; the mutation reports | `gh api` check runs and workflow runs; the `mutation-reports` artifact the .NET pack uploads | Exists |
 | C10 | Security alerts | Code scanning, Dependabot and secret scanning alerts: severity, opened, fixed; the OpenSSF Scorecard result | `gh api` alerts endpoints; the Scorecard workflow's SARIF | Exists |
 | C11 | Daily run on `main` | The full suite on `main` with default settings, and again with every in-progress flag on | A scheduled workflow (`daily.yml`) whose result is a check run on `main` | New |
-| C12 | Escape records | `Escaped from: #n` and `Should have caught: <practice>` in a fix PR | C3's block, written by the fixer or developer | `Escaped from` Exists; the cause New |
-| C13 | Owner audit | Once per wave: a strict re-review of one random merged PR, its brief checked against `dispatch`'s brief checks, and the owner's own read of one PR in full, with the time it took | A reviewer dispatched by the lead on a merged PR; the owner records the findings and the time in the scorecard | New |
+| C12 | Escape records | `Escaped from: #n` and `Should have caught: <practice>` in a fix PR | C3's block, written by the fixer or developer | Exists |
+| C13 | Owner audit | Once per wave: a strict re-review of one random merged PR, its brief checked against `dispatch`'s brief checks, and the owner's own read of one PR in full, with the time it took | The `dispatch` skill's *The audit* and the review brief's *Audit* text: a comment starting `**Audit** at <sha>` on the merged PR; the owner records their own read and its time in the scorecard | Exists |
 | C14 | Code health | File and function sizes, duplication, analyzer suppressions, TODOs; tests that fake a type of the project itself; parsers and validators without a property or fuzz test; each test's duration | A pack-provided command that writes JSON, and the pack's test report uploaded like `mutation-reports` (the language decides how) | New |
 | C15 | Dispatch log | Each agent the lead starts or resumes: time, agent id, role (agent type), model, the whole brief, and the agent's report when it returns (its outcome and `Live spend:` line) | A plugin hook after the Agent tool, appending one JSON line to `<session>/dispatches.jsonl`, beside the transcripts; read locally, never published | New |
 | C16 | Repository settings | Branch protection or rulesets on `main` (required checks, up to date, admins), merge settings, `security_and_analysis` (secret scanning, push protection) | `gh api` repository, branch protection and rulesets endpoints | New |
 
 ### The PR facts block
 
-Every PR description ends with an HTML comment the scorecard reads; it renders as nothing on GitHub:
-
-```text
-<!-- sdlc
-task: W3-T2                      the plan's task, or none
-kind: dark                       dark | flagged | switch-on | technical | fix | docs | process
-planned: S                       the plan's size, or none
-criteria: API-01.2, API-01.3     the numbered criteria it delivers, or none
-reads: docs/requirements/api.md; ARCHITECTURE §3
-metric: rework rate              a process change only: the metric it should move
-escaped-from: #41                a fix of merged code only
-should-have-caught: criteria     criteria | tests | mutation | review | design | threat-model | none
--->
-```
-
-The reviewer checks it like the rest of the description: a wrong kind or a missing `escaped-from` is a `[process]`
-must-fix.
+Every PR description ends with an HTML comment that holds the facts only its author knows: the task, its kind, the
+planned size, the criteria it delivers, what its developer read, a process change's metric, and for a fix of merged
+code the PR it escaped from and the guard that should have caught it. Its format is in the template's
+[`docs/conventions.md`](../plugins/sdlc-kit/template/docs/conventions.md#how-we-work), which agents read; the
+reviewer checks it against the diff.
 
 ## Metrics by phase
 
@@ -336,7 +324,7 @@ scorecard folder, outside the repository and any agent's checkout (by default `~
 
 | PR | What it adds | Metrics it enables |
 |---|---|---|
-| Recording | The PR facts block (C3) in the developer, fixer and reviewer definitions; `git-gate.py`'s block log (C6); the `Conflicts:` trailer (C4); `Should have caught:` (C12); the daily run on `main` (C11); the owner audit in the lead's routine (C13); the dispatch log hook (C15); the `claim` and `withdrawn` markers and the owner's ruling format (C2) | All but MN9, MN10 and those needing C14 |
+| Recording | Done: the PR facts block (C3) in the conventions and the developer, fixer and reviewer definitions; `git-gate.py`'s block log (C6); the `Conflicts:` trailer (C4); `should-have-caught` (C12); the owner audit in the lead's routine (C13); the `(claim)` and `Withdrawn:` markers and the owner's ruling format (C2). Left: the daily run on `main` (C11), in a PR with each pack's suite | All but MN1, MN9, MN10 and those needing C14 |
 | Scorecard | `scorecard.py` (its readers include the repository settings, C16), its tests, and the scorecard page's template | Every metric above with data |
 | Release flags | Done (`docs/flags.md`); the flags-on daily run comes with Recording | MN9, PL8; MN1 with flags on after Recording |
 | Each pack | The code-health command and the test report (C14) | MN10, BU9, BU10 |

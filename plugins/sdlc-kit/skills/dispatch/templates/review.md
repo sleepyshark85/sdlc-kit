@@ -22,3 +22,15 @@ The same reviewer's later rounds, by `SendMessage` from the lead or from the age
 ```text
 Round {{2 or 3}} of 3 for PR #{{n}} at {{full head sha}}, replying to your verdict at {{sha}}: {{one line per fix}}. Check CI, post a verdict naming the head, and reply in the short format.
 ```
+
+## Audit
+
+Once per wave, a new reviewer on one merged PR picked at random (the lead's routine, *The audit*):
+
+```text
+Audit merged PR #{{n}}, merged at {{merge commit sha}}: review it as if it were open, strictly, against the
+conventions, the architecture and the quality bar. It has merged, so post no verdict: post one comment starting
+"**Audit** at {{merge commit sha}}" with the must-fixes its review missed, each with its cause label, or "none".
+Scratch prefix: `{{prefix}}-`. Live API cap: {{"$X" or "no live calls"}}.
+Follow the dispatch skill's agent-rules.md, and reply in its short format.
+```

@@ -37,5 +37,10 @@ Kind asked for: `$0` (`developer`, `fix`, `review` or `merge-check`).
   the PR `owner-decision`) and sets auto-merge.
 - Resume an agent only for the same PR and while its context is under the context hook's first warning (the hook's
   `--report` shows each agent's size); otherwise dispatch a fresh one.
+- **Round 3 to the owner:** the owner's ruling goes on the PR as a comment, one line per open must-fix:
+  `**Owner: upheld** <number and label>` (it is fixed before the merge) or `**Owner: overruled** <number and label>`.
+- **The audit, once per wave** after its last merge: a new reviewer re-reviews one merged PR picked at random, with
+  the [review](templates/review.md) brief's *Audit* text, and checks that PR's briefs against step 3 above. The owner
+  also reads one PR in full and notes the time it took. Both go to the owner for the scorecard, never to a brief.
 - Keep a status note in the project memory, and update it when the context hook warns and at the end of a session.
 - A PR that changes the process (agents, skills, hooks, conventions) names the metric it should move.
