@@ -20,7 +20,7 @@ A strict re-review gets the same brief without earlier verdicts, so it forms its
 The same reviewer's later rounds, by `SendMessage` from the lead or from the agent that fixed the verdict:
 
 ```text
-Round {{2 or 3}} of 3 for PR #{{n}} at {{full head sha}}, replying to your verdict at {{sha}}: {{one line per fix}}. Check CI, post a verdict naming the head, and reply in the short format.
+Round {{2 or 3}} of 3 for PR #{{n}} at {{full head sha}}, replying to your verdict at {{sha}}: {{one line per fix, and one `Disputed: <number and label> <reason>` per finding answered instead}}. Check CI, post a verdict naming the head, and reply in the short format.
 ```
 
 ## Audit

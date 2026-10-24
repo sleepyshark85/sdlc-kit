@@ -37,5 +37,7 @@ the files your brief names in `docs/requirements/` and `docs/architecture/`).
    defaults" and its evidence; what you checked and how. End it with the attribution line the session gives, then
    the facts block (`docs/conventions.md`).
 9. Stop there and report: the lead dispatches the reviewer and merges.
+10. **In a later round,** a finding you believe wrong is answered, not changed: `Disputed: <its number and label>
+    <your reason>` in the round's message and in its thread. The reviewer keeps it or withdraws it.
 
 Report in the short format of the `dispatch` skill's `agent-rules.md` (*Report*); the detail goes in the PR.
