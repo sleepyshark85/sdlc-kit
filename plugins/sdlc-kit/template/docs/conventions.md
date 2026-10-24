@@ -14,9 +14,10 @@ what the code must do.
 - **Small tasks make small PRs.** Work is planned as tasks of one behaviour or one contract each (the `plan-wave`
   skill), and each task is one PR. A developer who finds a task larger than planned stops and proposes a split.
 - **Unfinished work merges, but is off on `main`.** PRs merge once approved, and `main` with its defaults shows only
-  finished features, for the daily run and any demo. New code stays unwired until its switch-on task; a change to
-  old code paths sits behind a release flag, off by default and listed in `docs/flags.md`; a schema or format change
-  goes expand, then contract. Every task before the switch-on is behaviour-neutral with the defaults, and says so in
+  finished features, for the daily run and any demo. New code stays unwired until its switch-on task; old code is
+  reshaped first (a refactor, a parallel change, branch by abstraction), and only what still has to sit in old code
+  paths goes behind a release flag, off by default and listed in `docs/flags.md`; a schema or format change goes
+  expand, then contract. Every task before the switch-on is behaviour-neutral with the defaults, and says so in
   its PR (`plan-wave`, *Off on `main` until switched on*).
 - **One change per PR.** A mechanical change (rename, move, reformat) is its own PR and names the command that made it.
 - **Hooks enforce the mechanical rules** (the plugin's `git-gate.py`, with this project's `.sdlc/checks.toml`): no

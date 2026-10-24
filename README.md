@@ -34,7 +34,7 @@ plugins/sdlc-kit/
     reviewer.md                     judges a PR, posts the verdict the gate reads, never commits (Opus)
   skills/
     dispatch/                       the lead's briefs (developer, fix, review, merge-check), agent rules, lead's routine
-    plan-wave/                      tasks of one behaviour or contract, dark or switch-on, decomposition checklist
+    plan-wave/                      tasks of one behaviour or contract (dark, flagged, switch-on, technical), checklist
     new-project/                    scaffolds a project and walks the owner through their steps
     split-docs/                     grows the short requirements or architecture into full req42 or arc42 (templates/)
   hooks/
@@ -123,7 +123,7 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | The code quality bar: good code, not working code | AI code is plausible and subtly wrong | conventions *Code quality bar*; `reviewer` check 6 | Guided |
 | Least privilege for agents | The coding agent is an attack surface | `template/.claude/settings.json` (deny rules); `git-gate.py`: no force push, no branch deletion, merge only with `--auto`, no repository settings | Enforced |
 | Unfinished work merges but is off on `main`; one switch-on task releases it | Trunk-based small PRs; `main` shows only finished features for the daily run and demos | `plan-wave` *Off on `main` until switched on* (composition, release flags, expand then contract); `developer` step 3; `reviewer` check 4; quality bar *PR scope*; `dotnet.md` (composition and the `Flags` class) | Trial |
-| Release flags bounded: registered, off by default, one check point, removed within two waves | Flags are cheap to add and costly to keep; each doubles the paths to test | `template/docs/flags.md`; `plan-wave` (the leak table, removal tasks, checklist); quality bar *PR scope*; `reviewer` check 4 | Trial |
+| Release flags bounded: listed, off by default, one check point, removed within two waves of the switch-on | Flags are cheap to add and costly to keep; each doubles the paths to test | `template/docs/flags.md`; `plan-wave` (the leak table, removal tasks, checklist); quality bar *PR scope*; `reviewer` check 4 | Trial |
 | Old code reshaped before the feature: preparatory refactor, parallel change, branch by abstraction | A feature that touches much old code merges in small PRs only once restructuring is apart from behaviour | `plan-wave` *When the feature changes old code*; `reviewer` check 4 (a refactor keeps behaviour) | Trial |
 | AI authorship visible, a person accountable | Accountability stays with a person | `developer` step 8 (attribution line); owner decides after round 3 | Guided |
 

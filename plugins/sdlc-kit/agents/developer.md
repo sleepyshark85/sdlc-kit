@@ -14,14 +14,16 @@ the files your brief names in `docs/requirements/` and `docs/architecture/`).
 1. Branch from the up-to-date base your brief names (`main` unless it is stacked), with an allowed prefix.
 2. Build the task, and only the task: its acceptance criteria, edge states included, to the code quality bar in
    `docs/conventions.md`. Mediocre code is sent back even when it works. Write the tests as you go.
-3. **A dark or flagged task changes no behaviour with the defaults.** Nothing existing changes: not wired in, not
-   registered, no existing assertion or golden file edited, schema additions only. A flagged task adds or uses its
-   flag as `docs/flags.md` lists it, off by default and read at one point, and tests the new path with it on.
+3. **A dark or flagged task changes no behaviour with the defaults.** No existing assertion or golden file edited,
+   schema additions only. A dark task's code is not wired in or registered. A flagged task's code is wired in only
+   behind its flag, at its one check point, so with the flag off nothing it adds runs; it uses the flag as its row
+   in `docs/flags.md` names it, off by default, and tests it off and on. A refactor keeps behaviour; a contract or
+   flag-removal task, after the switch-on, keeps behaviour with the defaults and removes only the old path's tests.
 4. **Stop and propose a split** if the task turns out larger than planned (the plan's size, or more than one
    behaviour or contract), instead of pushing through.
 5. Keep the docs in step: the traceability (`docs/traceability.md`, or the area file's section once split) for
-   every test named after a requirement, the design notes for every choice the code alone doesn't explain, README
-   when how to run something changes.
+   every test named after a requirement, the flag's *State* in `docs/flags.md` for a switch-on or removal task, the
+   design notes for every choice the code alone doesn't explain, README when how to run something changes.
 6. **Self-check before opening the PR:**
    - run mutation testing on the code you changed (the command is in `docs/languages/`), and kill each survivor or
      show why it is equivalent;
