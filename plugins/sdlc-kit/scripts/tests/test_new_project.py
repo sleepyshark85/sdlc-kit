@@ -11,6 +11,10 @@ SCRIPT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))
 spec = importlib.util.spec_from_file_location("new_project", SCRIPT)
 kit = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(kit)
+rules_spec = importlib.util.spec_from_file_location(
+    "workflow_rules", os.path.join(kit.TEMPLATE, ".github", "workflow_rules.py"))
+workflow_rules = importlib.util.module_from_spec(rules_spec)
+rules_spec.loader.exec_module(workflow_rules)
 
 
 class NewProjectTest(unittest.TestCase):
@@ -52,13 +56,40 @@ class NewProjectTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.target, ".github", "workflows", "dotnet.yml")))
         self.assertIn("dotnet-ubuntu", checks)
 
+    def test_the_dotnet_pack_sets_up_its_toolchain_before_the_daily_suite(self):
+        kit.create(self.target, "Shop", ["dotnet"])
+
+        daily = self.read(".github", "workflows", "daily.yml")
+        self.assertIn("    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n\n"
+                      "      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0\n"
+                      "        with:\n          global-json-file: dotnet/global.json\n\n      - name: Suite\n", daily)
+        self.assertEqual([], workflow_rules.breaches("daily.yml", daily))
+
+    def test_the_dotnet_component_names_its_daily_suite_and_flag_variable(self):
+        kit.create(self.target, "Shop", ["dotnet"])
+
+        with open(os.path.join(self.target, ".sdlc", "checks.toml"), "rb") as file:
+            component = tomllib.load(file)["component"][0]
+        self.assertEqual(([["dotnet", "restore", "--locked-mode"],
+                           ["dotnet", "test", "--configuration", "Release", "--nologo", "--blame-hang-timeout", "2m"]],
+                          "Flags__{flag}"),
+                         (component["daily"], component["flag_variable"]))
+
+    def test_a_daily_run_without_its_suite_step_is_refused(self):
+        kit.create(self.target, "Shop", [])
+        daily = os.path.join(self.target, ".github", "workflows", "daily.yml")
+        kit.write(daily, kit.read(daily).replace("      - name: Suite\n", "      - name: Tests\n"))
+
+        with self.assertRaisesRegex(kit.KitError, "daily.yml has no suite step"):
+            kit.add_pack(self.target, "dotnet")
+
     def test_adding_a_pack_twice_changes_nothing(self):
         kit.create(self.target, "Shop", ["dotnet"])
-        before = self.read(".github", "workflows", "codeql.yml")
+        before = [self.read(".github", "workflows", name) for name in ("codeql.yml", "daily.yml")]
 
         kit.add_pack(self.target, "dotnet")
 
-        self.assertEqual(before, self.read(".github", "workflows", "codeql.yml"))
+        self.assertEqual(before, [self.read(".github", "workflows", name) for name in ("codeql.yml", "daily.yml")])
 
     def test_an_unknown_pack_is_refused(self):
         kit.create(self.target, "Shop", [])

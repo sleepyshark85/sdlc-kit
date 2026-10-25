@@ -38,7 +38,7 @@ Status of each collector and metric:
 | C8 | Session transcripts | Tokens per call (input, output, cache read and write), turns and tool calls, per agent and role | The transcripts' `usage` fields and tool calls, under `~/.claude/projects/<project>/` | Exists |
 | C9 | CI runs | Each check's conclusion, duration and attempt; the mutation reports | `gh api` check runs and workflow runs; the `mutation-reports` artifact the .NET pack uploads | Exists |
 | C10 | Security alerts | Code scanning, Dependabot and secret scanning alerts: severity, opened, fixed; the OpenSSF Scorecard result | `gh api` alerts endpoints; the Scorecard workflow's SARIF | Exists |
-| C11 | Daily run on `main` | The full suite on `main` with default settings, and again with every in-progress flag on | A scheduled workflow (`daily.yml`) whose result is a check run on `main` | New |
+| C11 | Daily run on `main` | The full suite on `main` with default settings, and again with every in-progress flag on | The template's scheduled workflow (`daily.yml`, with `.github/daily.py`), daily and on demand: each component's `daily` suite from `.sdlc/checks.toml`, which its pack writes, and each flag turned on through the component's `flag_variable`. Its results are the check runs `daily (defaults)` and `daily (flags-on)` on `main`'s head commit | Exists |
 | C12 | Escape records | The facts block's `escaped-from` and `should-have-caught` lines in a fix PR | C3's block, written by the fixer or developer | Exists |
 | C13 | Owner audit | Once per wave: a strict re-review of one random merged PR; the owner's check of that PR's briefs against `dispatch`'s brief checks; and the owner's own read of one PR in full, with the time it took | The `dispatch` skill's *The audit* and the review brief's *Audit* text: a comment starting `**Audit** at <sha>` on the merged PR. The owner, who alone reads the lead's session, records the brief check, their read and its time in the scorecard | Exists |
 | C14 | Code health | File and function sizes, duplication, analyzer suppressions, TODOs; tests that fake a type of the project itself; parsers and validators without a property or fuzz test; each test's duration | A pack-provided command that writes JSON, and the pack's test report uploaded like `mutation-reports` (the language decides how) | New |
@@ -267,6 +267,7 @@ Each row of the README's table, with its adherence and effect metrics, or why it
 | Property and fuzz tests for parsers and validators | BU10 | MN5 (`tests` escapes in parsers) |
 | Generated tests kept only if they kill a mutant or pin a criterion | BU11 | MG3 (suite time); MN8 |
 | Flaky tests found, not retried | MG4 (re-runs) | MG4 (flakes found) |
+| A daily run of the full suite on `main`, with the defaults and with every in-progress flag on | MN1 (a run each day) | MN1 (red runs, hours red, time back to green) |
 | Golden files change only on purpose | BU12 | MN5 (`tests` escapes) |
 
 ### Merge and release
@@ -326,8 +327,8 @@ scorecard folder, outside the repository and any agent's checkout (by default `~
 
 | PR | What it adds | Metrics it enables |
 |---|---|---|
-| Recording | Done: the PR facts block (C3) in the conventions and the developer, fixer and reviewer definitions; `git-gate.py`'s block log (C6); the `Conflicts:` trailer (C4); `should-have-caught` (C12); the owner audit in the lead's routine (C13); the `(claim)` and `Withdrawn:` markers and the owner's ruling format (C2). Left: the daily run on `main` (C11), in a PR with each pack's suite | All but MN1, MN9, MN10 and those needing C14 |
+| Recording | Done: the PR facts block (C3) in the conventions and the developer, fixer and reviewer definitions; `git-gate.py`'s block log (C6); the `Conflicts:` trailer (C4); `should-have-caught` (C12); the owner audit in the lead's routine (C13); the `(claim)` and `Withdrawn:` markers and the owner's ruling format (C2) | All but MN1, MN9, MN10 and those needing C14 |
 | Scorecard | `scorecard.py` (its readers include the repository settings, C16), its tests, and the scorecard page's template | Every metric above with data |
-| Release flags | Done (`docs/flags.md`); the flags-on daily run comes with the daily run's PR | MN9, PL8; MN1 with flags on after the daily run |
+| Release flags | Done (`docs/flags.md`, and the flags-on daily run) | MN9, PL8; MN1 with flags on |
 | Each pack | The code-health command and the test report (C14) | MN10, BU9, BU10 |
-| Daily run | The scheduled run on `main` with defaults and with flags on (C11), its suite named by each pack | MN1 |
+| Daily run | Done: the scheduled run on `main` with defaults and with flags on (C11), its suite and flag variable named by each pack | MN1 |

@@ -19,3 +19,5 @@ docs = '\.(md|html|svg|png)$'
 # directory = "dotnet"              # where its commands run
 # before_commit = [["dotnet", "format", "--verify-no-changes"]]
 # before_push = [["dotnet", "test"]]
+# daily = [["dotnet", "test"]]     # the full suite, for the daily run (.github/daily.py)
+# flag_variable = "Flags__{flag}"  # the environment variable that turns a release flag on, set to "true"
