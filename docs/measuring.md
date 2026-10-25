@@ -42,7 +42,7 @@ Status of each collector and metric:
 | C12 | Escape records | The facts block's `escaped-from` and `should-have-caught` lines in a fix PR | C3's block, written by the fixer or developer | Exists |
 | C13 | Owner audit | Once per wave: a strict re-review of one random merged PR; the owner's check of that PR's briefs against `dispatch`'s brief checks; and the owner's own read of one PR in full, with the time it took | The `dispatch` skill's *The audit* and the review brief's *Audit* text: a comment starting `**Audit** at <sha>` on the merged PR. The owner, who alone reads the lead's session, records the brief check, their read and its time in the scorecard | Exists |
 | C14 | Code health | File and function sizes, duplication, analyzer suppressions, TODOs; tests that fake a type of the project itself; parsers and validators without a property or fuzz test; each test's duration | A pack-provided command that writes JSON, and the pack's test report uploaded like `mutation-reports` (the language decides how) | New |
-| C15 | Dispatch log | Each agent the lead starts or resumes: time, agent id, role (agent type), model, the whole brief, and the agent's report when it returns (its outcome and `Live spend:` line) | A plugin hook after the Agent tool, appending one JSON line to `<session>/dispatches.jsonl`, beside the transcripts; read locally, never published | New |
+| C15 | Dispatch log | Each agent the lead starts or resumes: time, agent id, role (agent type), model, the whole brief, and the agent's report when it returns (its outcome and `Live spend:` line) | Read from the session files, no hook needed: the lead's transcript holds each Agent call (brief, resolved model, agent id) and each SendMessage resume; each subagent's `.meta.json` holds its type and description, and its transcript its report. `scripts/agent_report.py` reads them locally, never published | Exists |
 | C16 | Repository settings | Branch protection or rulesets on `main` (required checks, up to date, admins), merge settings, `security_and_analysis` (secret scanning, push protection) | `gh api` repository, branch protection and rulesets endpoints | New |
 
 ### The PR facts block
@@ -157,7 +157,9 @@ goes the wrong way. [Coverage](#coverage-every-practice) says which practice eac
 The same data, cut by **agent role** (lead, developer, fixer, reviewer) and by **model**, to see how the team
 works, what each role costs and how good its output is. The dispatch log (C15) ties each agent to its task and PR;
 its transcript (C8, `<session>/subagents/agent-<id>.jsonl`) gives its activity and cost; GitHub (C1, C2, C12) gives
-the quality of what it produced.
+the quality of what it produced. The owner's `team-report` skill (`scripts/agent_report.py`) reports AG1, AG5 and AG7
+today, and AG2 (no turns), AG4 (no permission denials apart from tool errors) and AG8 in part; the rest come with
+the scorecard.
 
 ### Activity
 
@@ -175,7 +177,7 @@ the quality of what it produced.
 | AG5 | Tokens (input, output, cache read, cache write) and cost per dispatch | Role, model | C8 | The cost table behind LN1 |
 | AG6 | Cost per merged PR and per feature switched on, split by role | Role | C8, C15, C1 | Which role a PR's cost goes to. Review costing more than building is expected; a lead's share rising is not |
 | AG7 | Cache read share of input tokens | Role | C8 | Low: briefs or contexts change in ways that defeat prompt caching |
-| AG8 | Peak context per dispatch; dispatches past the warnings | Role | C7 | Read with BU6: large contexts cost on every step and recall less |
+| AG8 | Peak context per dispatch; dispatches past the warnings | Role | C8 (the warnings' thresholds from C7's hook) | Read with BU6: large contexts cost on every step and recall less |
 
 ### Quality of each role's output
 
