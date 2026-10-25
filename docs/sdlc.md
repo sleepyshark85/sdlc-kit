@@ -69,7 +69,7 @@ What keeps that flow safe is mostly mechanical, so it holds whatever an agent do
 |---|---|
 | The agent's session | The git hook: no commit on `main` or push to it, branch prefixes, staged files, no force push, merge only with `--auto`, no settings changes, the reviewer never commits, only the reviewer posts verdicts; each component's checks before a commit and a push. The context hook: a warning at 150k and 300k tokens. Permission rules for destructive commands |
 | GitHub | Branch protection with every required check, up to date, admins included; the review gate trusting only the reviewer's identity and the owner's; merge commits only |
-| CI | Build with warnings as errors, tests on two systems, format, locked restore, vulnerable packages, CodeQL, diff-scoped mutation with survivors in the summary, the docs' links; weekly full mutation against the floor, flaky-test runs, Scorecard |
+| CI | Build with warnings as errors, tests on two systems, format, locked restore, vulnerable packages, CodeQL, diff-scoped mutation with survivors in the summary, the docs' links; the daily run on `main` with the defaults and with every flag on; weekly full mutation against the floor, flaky-test runs, Scorecard |
 
 ## Measuring
 

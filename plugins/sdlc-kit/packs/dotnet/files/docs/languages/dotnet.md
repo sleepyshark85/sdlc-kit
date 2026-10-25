@@ -19,7 +19,9 @@ How .NET code is written here, on top of `docs/conventions.md`. The code lives i
 - **Release flags** are `bool` properties of one `Flags` options class bound from the `Flags` configuration section,
   each `false` by default and named as in `docs/flags.md`. A flag is read once, at the seam the preparatory refactor
   made (usually the composition root choosing an implementation), never deep in the code. Tests set it through
-  configuration (`Flags:<Name>`) and cover both values.
+  configuration (`Flags:<Name>`) and cover both values. The configuration reads environment variables after its
+  defaults, as the generic host does, and so do the tests' own, so the daily run's flags-on suite turns a flag on
+  with `Flags__<Name>=true`; only a test of a flag's off path sets it to `false` itself.
 - **Async all the way,** with a `CancellationToken` on every I/O path; `TimeProvider` for time, never `DateTime.Now`.
 - **Packages are versioned centrally** in `Directory.Packages.props`, restored from `packages.lock.json`; a new one
   needs its line in `docs/decisions.md`.

@@ -5,7 +5,8 @@
 required_checks = ["dotnet-changes", "dotnet-ubuntu", "dotnet-windows", "dotnet-quality",
                    "dotnet-mutation-changes", "dotnet-mutation", "codeql (csharp)"]
 
-# Appended to .sdlc/checks.toml.
+# Appended to .sdlc/checks.toml. `daily` is the full suite for the daily run (.github/daily.py); `flag_variable` the
+# environment variable that turns a release flag on, which .NET's configuration reads as `Flags:<Name>`.
 component = '''
 [[component]]
 name = "dotnet"
@@ -16,6 +17,16 @@ before_commit = [["dotnet", "format", "--verify-no-changes"],
                  ["dotnet", "build", "--configuration", "Release", "--nologo", "--verbosity", "quiet"]]
 before_push = [["dotnet", "test", "--configuration", "Release", "--nologo", "--verbosity", "quiet",
                 "--blame-hang-timeout", "2m"]]
+daily = [["dotnet", "restore", "--locked-mode"],
+         ["dotnet", "test", "--configuration", "Release", "--nologo", "--blame-hang-timeout", "2m"]]
+flag_variable = "Flags__{flag}"
+'''
+
+# Added to .github/workflows/daily.yml before its suite: the toolchain the daily suite needs.
+daily_setup = '''
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: dotnet/global.json
 '''
 
 # Added to the matrix of .github/workflows/codeql.yml.

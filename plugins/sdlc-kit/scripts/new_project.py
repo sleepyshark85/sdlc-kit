@@ -7,8 +7,8 @@
 `create` copies template/ into a new or empty folder, names the project in its files, and adds each pack. `add-pack`
 copies the pack's files/ over the project (never replacing a file), and registers the pack where the template's files
 need it, as the pack's pack.toml says: its component in .sdlc/checks.toml, its CodeQL language, its Dependabot
-ecosystem and its after-edit hook. It prints the pack's required checks, for scripts/setup-repo.sh. Adding a pack
-twice changes nothing."""
+ecosystem, its after-edit hook and its toolchain's setup in the daily run. It prints the pack's required checks, for
+scripts/setup-repo.sh. Adding a pack twice changes nothing."""
 import json
 import os
 import shutil
@@ -21,6 +21,7 @@ PACKS = os.path.join(KIT, "packs")
 NAME = "{{project}}"
 NAMED_FILES = ("CLAUDE.md", "README.md", "REQUIREMENTS.md", "ARCHITECTURE.md", os.path.join("docs", "decisions.md"))
 CODEQL_MATRIX = "        include:\n"
+DAILY_SUITE_STEP = "      - name: Suite\n"
 
 
 class KitError(Exception):
@@ -71,6 +72,7 @@ def add_pack(project, pack):
     add_codeql_language(os.path.join(project, ".github", "workflows", "codeql.yml"), manifest["codeql"])
     add_dependabot_ecosystem(os.path.join(project, ".github", "dependabot.yml"), manifest["dependabot"])
     add_after_edit_hook(os.path.join(project, ".claude", "settings.json"), manifest["after_edit_hook"])
+    add_daily_setup(os.path.join(project, ".github", "workflows", "daily.yml"), manifest["daily_setup"])
     return manifest["required_checks"]
 
 
@@ -103,6 +105,14 @@ def add_after_edit_hook(path, script):
     hooks.append({"matcher": "Edit|Write", "hooks": [
         {"type": "command", "command": f'python3 "$CLAUDE_PROJECT_DIR/{script}"', "timeout": 10}]})
     write(path, json.dumps(settings, indent=2) + "\n")
+
+
+def add_daily_setup(path, steps):
+    """Adds a pack's setup steps to the daily run, before its suite."""
+    text = read(path)
+    if DAILY_SUITE_STEP not in text:
+        raise KitError(f"{path} has no suite step to add the setup steps before.")
+    write(path, text.replace(DAILY_SUITE_STEP, steps + "\n" + DAILY_SUITE_STEP))
 
 
 def main(argv):

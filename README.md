@@ -72,13 +72,15 @@ plugins/sdlc-kit/
       changes.py                    which component a PR changes; docs-only PRs skip the builds
       links.py                      checks the Markdown's relative links and anchors
       workflow_rules.py             every workflow: top-level permissions, actions pinned by commit sha
+      daily.py                      the daily run's suites, with the defaults or with every in-progress flag on
       test_*.py                     the tooling's tests, run by the quality workflow
       dependabot.yml                weekly updates of the pinned actions (and each pack's ecosystem)
-      workflows/                    review, quality, codeql, scorecard
+      workflows/                    review, quality, codeql, scorecard, daily
     scripts/setup-repo.sh           branch protection, merge settings, REVIEWERS, secret scanning (the owner runs it)
   packs/
     dotnet/
-      pack.toml                     what the pack registers: component, CodeQL language, Dependabot, hook, checks
+      pack.toml                     what the pack registers: component (its daily suite and flag variable too),
+                                    CodeQL language, Dependabot, hook, the daily run's setup, checks
       files/                        copied over the project: dotnet/ build files, docs/languages/dotnet.md,
                                     .NET and mutation workflows, the survivors summary, the C# file-rules hook
                                     and its tests (.github/test_cs_rules.py)
@@ -130,8 +132,8 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | The developer self-checks before review | Cheaper than a review round | `developer` step 6 (mutation on the diff, diff re-read, base merged) | Guided |
 | The code quality bar: good code, not working code | AI code is plausible and subtly wrong | conventions *Code quality bar*; `reviewer` check 6 | Guided |
 | Least privilege for agents | The coding agent is an attack surface | `template/.claude/settings.json` (deny rules); `git-gate.py`: no force push, no branch deletion, merge only with `--auto`, no repository settings | Enforced |
-| Unfinished work merges but is off on `main`; one switch-on task releases it | Trunk-based small PRs; `main` shows only finished features for the daily run and demos | `plan-wave` *Off on `main` until switched on* (composition, release flags, expand then contract); `developer` step 3; `reviewer` check 4; quality bar *PR scope*; `dotnet.md` (composition and the `Flags` class) | Trial |
-| Release flags bounded: listed, off by default, one check point, removed within two waves of the switch-on | Flags are cheap to add and costly to keep; each doubles the paths to test | `template/docs/flags.md`; `plan-wave` (the leak table, removal tasks, checklist); quality bar *PR scope*; `reviewer` check 4 | Trial |
+| Unfinished work merges but is off on `main`; one switch-on task releases it | Trunk-based small PRs; `main` shows only finished features for the daily run and demos | `plan-wave` *Off on `main` until switched on* (composition, release flags, expand then contract); `developer` step 3; `reviewer` check 4; quality bar *PR scope*; `dotnet.md` (composition and the `Flags` class); the daily run on `main` shows a leak | Trial |
+| Release flags bounded: listed, off by default, one check point, removed within two waves of the switch-on | Flags are cheap to add and costly to keep; each doubles the paths to test | `template/docs/flags.md`; `plan-wave` (the leak table, removal tasks, checklist); quality bar *PR scope*; `reviewer` check 4; the daily run with every flag on | Trial |
 | Old code reshaped before the feature: preparatory refactor, parallel change, branch by abstraction | A feature that touches much old code merges in small PRs only once restructuring is apart from behaviour | `plan-wave` *When the feature changes old code*; `reviewer` check 4 (a refactor keeps behaviour) | Trial |
 | AI authorship visible, a person accountable | Accountability stays with a person | `developer` step 8 (attribution line); owner decides after round 3 | Guided |
 
@@ -160,6 +162,7 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | Property and fuzz tests for parsers and validators | They find what examples miss | conventions *Tests* | Guided |
 | Generated tests kept only if they kill a mutant or pin a criterion | Meta's TestGen-LLM and mutation-guided generation | conventions *Tests*; `developer` step 6 | Guided |
 | Flaky tests found, not retried | A flaky test is a bug | .NET pack `dotnet-flaky` (weekly, five runs, two systems) | Enforced |
+| A daily run of the full suite on `main`, with the defaults and with every in-progress flag on | `main` stays releasable, and a flag's on path is tested before its switch-on (MN1) | `template/.github/workflows/daily.yml` and `daily.py`: the checks `daily (defaults)` and `daily (flags-on)`; each pack's `daily` suite, `flag_variable` and setup steps (`pack.toml`); `template/docs/flags.md` | Reported |
 | Golden files change only on purpose | Silent regeneration hides regressions | conventions *Tests* | Guided |
 
 ### 6. Merge and release

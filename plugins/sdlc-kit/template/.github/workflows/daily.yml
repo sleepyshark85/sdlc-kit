@@ -1,0 +1,29 @@
+name: Daily
+
+# The daily run on main: every component's full suite (its `daily` commands in .sdlc/checks.toml), once with the
+# defaults and once with every in-progress release flag in docs/flags.md on (.github/daily.py). Each run is its own
+# check on main's head commit, `daily (defaults)` and `daily (flags-on)`, which the scorecard reads; a red one means
+# unfinished work leaked or a test broke, and is fixed before new work merges. Each pack adds its toolchain's setup
+# steps before the suite (scripts/new_project.py).
+on:
+  schedule:
+    - cron: "53 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  daily:
+    name: daily (${{ matrix.run }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [defaults, flags-on]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Suite
+        run: python3 .github/daily.py ${{ matrix.run }}
