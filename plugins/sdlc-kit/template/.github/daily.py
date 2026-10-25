@@ -26,10 +26,15 @@ STATES = (IN_PROGRESS, "on", "removed")
 PLACEHOLDER = "{{"
 FLAG_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
 SEPARATOR_CELL = re.compile(r":?-+:?\Z")
+NAME = "name"
+DIRECTORY = "directory"
 SUITE = "daily"
 FLAG_VARIABLE = "flag_variable"
 FLAG_SLOT = "{flag}"
 ON_VALUE = "true"
+GROUP = "::group::{}"  # GitHub's workflow commands
+END_GROUP = "::endgroup::"
+ERROR = "::error title={}::{}"
 
 
 class DailyError(Exception):
@@ -86,25 +91,29 @@ def flag_environment(component, flags):
         return {}
     pattern = component.get(FLAG_VARIABLE, "")
     if FLAG_SLOT not in pattern:
-        raise DailyError(f"{component['name']} has a {SUITE} suite but its {FLAG_VARIABLE} does not name the "
+        raise DailyError(f"{component[NAME]} has a {SUITE} suite but its {FLAG_VARIABLE} does not name the "
                          f"variable that turns a flag on (with {FLAG_SLOT} for the flag)")
     return {pattern.replace(FLAG_SLOT, flag): ON_VALUE for flag in flags}
 
 
 def run_component(root, component, environment):
-    """Runs a component's suite until a command fails; returns that failure's message, or None."""
-    directory = os.path.join(root, component.get("directory", ""))
+    """Runs a component's suite in its directory until a command fails; returns that failure's message (or that its
+    directory is missing), or None."""
+    name = component[NAME]
+    directory = os.path.join(root, component.get(DIRECTORY, ""))
+    if not os.path.isdir(directory):
+        return f"{name}: its {DIRECTORY} `{component[DIRECTORY]}` is not a directory"
     for command in component[SUITE]:
         shown = " ".join(command)
-        print(f"::group::{component['name']}: {shown}", flush=True)
+        print(GROUP.format(f"{name}: {shown}"), flush=True)
         try:
             code = subprocess.run(command, cwd=directory, env=environment).returncode
         except FileNotFoundError:
-            return f"{component['name']}: `{command[0]}` is not on PATH"
+            return f"{name}: `{command[0]}` is not on PATH"
         finally:
-            print("::endgroup::", flush=True)
+            print(END_GROUP, flush=True)
         if code != 0:
-            return f"{component['name']}: `{shown}` failed with exit code {code}"
+            return f"{name}: `{shown}` failed with exit code {code}"
     return None
 
 
@@ -114,7 +123,7 @@ def run_suites(root, components, flags):
     suites = [(component, os.environ | flag_environment(component, flags))
               for component in components if component.get(SUITE)]
     if not suites:
-        print(f"No component in .sdlc/checks.toml names a {SUITE} suite; nothing to run.")
+        print(f"No component in {sdlc_paths.CONFIG} names a {SUITE} suite; nothing to run.")
     failures = [run_component(root, component, environment) for component, environment in suites]
     return [failure for failure in failures if failure]
 
@@ -134,7 +143,7 @@ def main(argv):
     except DailyError as error:
         failures = [str(error)]
     for failure in failures:
-        print(f"::error title=Daily run ({run}) failed::{failure}")
+        print(ERROR.format(f"Daily run ({run}) failed", failure))
     return 1 if failures else 0
 
 

@@ -5,6 +5,7 @@ import io
 import json
 import os
 import random
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -50,6 +51,7 @@ class InProgressFlagsTest(unittest.TestCase):
             TABLE + "| New Cart | X | W1 | W2 | W3 | off |\n": "the flag `New Cart` is not a name",
             TABLE + "| 2fa | X | W1 | W2 | W3 | off |\n": "the flag `2fa` is not a name",
             "| State | Flag |\n|---|---|\n| -off | -A |\n": "the flag `-A` is not a name",
+            TABLE + "| --- | X | W1 | W2 | W3 | off |\n": "the flag `---` is not a name",
             TABLE + "| A | X | W1 | W2 | W3 | Off |\n": "A's state `Off` is not one of off, on, removed",
             TABLE + "| A | X | W1 | W2 | off |\n": "has 5 cells, the table 6",
         }
@@ -136,6 +138,32 @@ class RunSuitesTest(unittest.TestCase):
 
         self.assertEqual([], failures)
 
+    def test_a_flag_turned_on_overrides_the_inherited_value(self):
+        with mock.patch.dict(os.environ, {"F_A": "false"}):
+            failures, _ = self.run_quietly([{"name": "web", "directory": "web", "flag_variable": "F_{flag}",
+                                             "daily": [EXITS_WITH_FLAG_A]}], ["A"])
+
+        self.assertEqual([], failures)
+
+    def test_a_directory_that_is_missing_or_a_file_is_the_components_failure(self):
+        open(os.path.join(self.root, "notes"), "w").close()
+        components = [{"name": "api", "directory": "api", "daily": [touches("never")]},
+                      {"name": "docs", "directory": "notes", "daily": [touches("never")]},
+                      {"name": "web", "directory": "web", "daily": [touches("web")]}]
+
+        failures, _ = self.run_quietly(components, [])
+
+        self.assertEqual((["api: its directory `api` is not a directory",
+                           "docs: its directory `notes` is not a directory"], True),
+                         (failures, os.path.exists(os.path.join(self.root, "web", "web"))))
+
+    def test_a_suite_killed_by_a_signal_fails(self):
+        killed = subprocess.CompletedProcess([], -9)  # how POSIX reports a process SIGKILL ended
+        with mock.patch.object(daily.subprocess, "run", return_value=killed):
+            failures, _ = self.run_quietly([{"name": "web", "directory": "web", "daily": [FAILS]}], [])
+
+        self.assertEqual([f"web: `{' '.join(FAILS)}` failed with exit code -9"], failures)
+
     def test_a_failure_stops_its_component_and_not_the_others(self):
         components = [{"name": "web", "directory": "web", "daily": [FAILS, touches("after")]},
                       {"name": "api", "daily": [["no-such-command-w-daily"], touches("never")]},
@@ -158,8 +186,10 @@ class RunSuitesTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(self.root, "web", "web")))
 
     def test_no_suite_is_said_and_passes(self):
-        self.assertEqual(([], "No component in .sdlc/checks.toml names a daily suite; nothing to run.\n"),
-                         self.run_quietly([{"name": "web", "before_push": [FAILS]}], ["A"]))
+        for component in ({"name": "web", "before_push": [FAILS]}, {"name": "web", "daily": []}):
+            with self.subTest(component=component):
+                self.assertEqual(([], f"No component in {daily.sdlc_paths.CONFIG} names a daily suite; nothing to "
+                                      "run.\n"), self.run_quietly([component], ["A"]))
 
 
 class MainTest(unittest.TestCase):

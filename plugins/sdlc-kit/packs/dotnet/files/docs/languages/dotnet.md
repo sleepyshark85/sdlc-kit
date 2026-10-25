@@ -21,7 +21,8 @@ How .NET code is written here, on top of `docs/conventions.md`. The code lives i
   made (usually the composition root choosing an implementation), never deep in the code. Tests set it through
   configuration (`Flags:<Name>`) and cover both values. The configuration reads environment variables after its
   defaults, as the generic host does, and so do the tests' own, so the daily run's flags-on suite turns a flag on
-  with `Flags__<Name>=true`; only a test of a flag's off path sets it to `false` itself.
+  with `Flags__<Name>=true`; only a test of a flag's off path sets it to `false` itself, adding that setting after
+  the environment variables so that it wins.
 - **Async all the way,** with a `CancellationToken` on every I/O path; `TimeProvider` for time, never `DateTime.Now`.
 - **Packages are versioned centrally** in `Directory.Packages.props`, restored from `packages.lock.json`; a new one
   needs its line in `docs/decisions.md`.
