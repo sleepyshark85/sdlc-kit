@@ -20,7 +20,13 @@ CHUNK = 64 * 1024
 TAIL_LIMIT = 8 * 1024 * 1024
 SIZES = "context-sizes"
 SUBAGENTS = "subagents"
+SUBAGENT = "agent-"
+JSONL = ".jsonl"
 MAIN = "main"
+INPUT = "input_tokens"
+CACHE_READ = "cache_read_input_tokens"
+CACHE_WRITE = "cache_creation_input_tokens"
+OUTPUT = "output_tokens"
 
 
 def entries(path):
@@ -42,6 +48,21 @@ def entries(path):
                     continue
 
 
+def prompt_tokens(usage):
+    """The tokens a request sent: its input, cache reads and cache writes. A response's usage records them."""
+    return sum(usage.get(field) or 0 for field in (INPUT, CACHE_READ, CACHE_WRITE))
+
+
+def subagent_transcript(session, agent_id):
+    """The transcript of the session's subagent with that id."""
+    return os.path.join(session, SUBAGENTS, f"{SUBAGENT}{agent_id}{JSONL}")
+
+
+def projects_folder():
+    """The Claude config folder's projects folder, which holds each project's session files."""
+    return os.path.join(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude"), "projects")
+
+
 def context_size(transcript):
     """The tokens sent with the agent's latest model request (input, cache reads and cache writes), or None if the
     transcript holds none yet. A subagent's transcript may not exist until its first call is written."""
@@ -51,9 +72,7 @@ def context_size(transcript):
         message = entry.get("message")
         if entry.get("type") != "assistant" or not isinstance(message, dict):
             continue
-        usage = message.get("usage") or {}
-        tokens = sum(usage.get(field) or 0 for field in
-                     ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"))
+        tokens = prompt_tokens(message.get("usage") or {})
         if tokens:
             return tokens
     return None
@@ -102,11 +121,11 @@ def now():
 def on_tool_use(payload, session):
     """Logs the agent's size; returns the hook output that warns it, or None."""
     agent = payload.get("agent_id")
-    transcript = os.path.join(session, SUBAGENTS, f"agent-{agent}.jsonl") if agent else payload["transcript_path"]
+    transcript = subagent_transcript(session, agent) if agent else payload["transcript_path"]
     tokens = context_size(transcript)
     if tokens is None:
         return None
-    log = os.path.join(session, SIZES, f"{agent or MAIN}.jsonl")
+    log = os.path.join(session, SIZES, f"{agent or MAIN}{JSONL}")
     limit = crossed(previous_size(log), tokens)
     append(log, {"time": now(), "agent_type": payload.get("agent_type") or MAIN, "tokens": tokens})
     if limit is None:
@@ -129,7 +148,7 @@ def report(sizes):
 
 def sizes_of(session_id):
     """The size-log folder of the session with that id, under any project of the Claude config folder, or None."""
-    projects = os.path.join(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude"), "projects")
+    projects = projects_folder()
     if not os.path.isdir(projects):
         return None
     for project in os.listdir(projects):

@@ -6,8 +6,8 @@
 It reads a project's sessions under <Claude config folder>/projects/<project>/ (by default the project of the current
 folder): each lead's transcript (<session>.jsonl), its subagents' (<session>/subagents/agent-<id>.jsonl, with a
 .meta.json holding the agent's type), and the block log git-gate.py writes beside them. It prints Markdown: by role,
-by model, the spread per dispatch for each role and model, and each role's tool mix. Agents are never ranked one by
-one: a dispatch is a sample of one (docs/measuring.md, *Comparing models*).
+by model, the spread per dispatch for each role and model (its tokens by kind and cost among them), and each role's
+tool mix. Agents are never ranked one by one: a dispatch is a sample of one (docs/measuring.md, *Comparing models*).
 
 An API response is written as several transcript entries that repeat its usage, so tokens are counted once per
 message id across the whole run. Cost uses prices.json (the Claude API's prices; a dated model id matches its model,
@@ -30,9 +30,11 @@ SCRIPTS = os.path.dirname(os.path.abspath(__file__))
 HOOKS = os.path.join(os.path.dirname(SCRIPTS), "hooks")
 PRICES = os.path.join(SCRIPTS, "prices.json")
 LEAD = "lead"
-TOKEN_FIELDS = ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens")
 FAST = "fast"
 US_ONLY = "us"
+LONG = "long"
+RESUMED = "resumedAgentId"
+META = ".meta.json"
 TOP_TOOLS = 5
 
 
@@ -46,11 +48,12 @@ def load_hook(name):
 
 context_size = load_hook("context-size")
 git_gate = load_hook("git-gate")
+TOKEN_FIELDS = (context_size.INPUT, context_size.CACHE_READ, context_size.CACHE_WRITE, context_size.OUTPUT)
 
 
 @dataclass
 class Response:
-    """One API response: its model, when it came, and its tokens by kind."""
+    """One API response: its model, when it came, and its tokens by kind; prompt is the context hook's measure."""
     model: str
     time: datetime
     fresh: int
@@ -58,11 +61,9 @@ class Response:
     write_1h: int
     read: int
     output: int
+    prompt: int
     speed: str
     geo: str
-
-    def prompt(self):
-        return self.fresh + self.write_5m + self.write_1h + self.read
 
 
 class Agent:
@@ -83,7 +84,7 @@ class Agent:
         return Counter(response.model for response in self.responses).most_common(1)[0][0]
 
     def peak(self):
-        return max(response.prompt() for response in self.responses)
+        return max(response.prompt for response in self.responses)
 
     def minutes(self):
         """From its first response to its last, the time between resumes included."""
@@ -131,25 +132,26 @@ def response_of(message, moment):
     usage = message.get("usage") or {}
     if not any(usage.get(field) for field in TOKEN_FIELDS):
         return None
-    written = usage.get("cache_creation_input_tokens") or 0
+    written = usage.get(context_size.CACHE_WRITE) or 0
     hour = min(written, (usage.get("cache_creation") or {}).get("ephemeral_1h_input_tokens") or 0)
-    return Response(message.get("model") or "-", moment, usage.get("input_tokens") or 0, written - hour, hour,
-                    usage.get("cache_read_input_tokens") or 0, usage.get("output_tokens") or 0,
-                    usage.get("speed") or "", usage.get("inference_geo") or "")
+    return Response(message.get("model") or "-", moment, usage.get(context_size.INPUT) or 0, written - hour, hour,
+                    usage.get(context_size.CACHE_READ) or 0, usage.get(context_size.OUTPUT) or 0,
+                    context_size.prompt_tokens(usage), usage.get("speed") or "", usage.get("inference_geo") or "")
 
 
 def read_transcript(agent, path, since, until, seen):
     """Adds the transcript's responses, tool calls and tool errors in the window to the agent. seen holds the
-    message and tool-call ids already counted in this run."""
+    message and tool-call ids already counted in this run. A response without a message id can't be told from its
+    copies, so it is left out, and cost stays a lower bound."""
     for entry in lines(path):
         message = entry.get("message")
         moment = recorded_time(entry.get("timestamp"))
         if not isinstance(message, dict) or moment is None or not within(moment, since, until):
             continue
         if entry.get("type") == "assistant":
-            key = message.get("id") or entry.get("requestId") or entry.get("uuid")
+            key = message.get("id")
             response = response_of(message, moment)
-            if response and key not in seen:
+            if response and key and key not in seen:
                 seen.add(key)
                 agent.responses.append(response)
             for block in content_blocks(message):
@@ -160,8 +162,8 @@ def read_transcript(agent, path, since, until, seen):
             agent.errors += sum(1 for block in content_blocks(message)
                                 if block.get("type") == "tool_result" and block.get("is_error"))
             result = entry.get("toolUseResult")
-            if isinstance(result, dict) and result.get("resumedAgentId"):
-                agent.resumed.append(result["resumedAgentId"])
+            if isinstance(result, dict) and result.get(RESUMED):
+                agent.resumed.append(result[RESUMED])
 
 
 def role_of(agent_type):
@@ -171,7 +173,7 @@ def role_of(agent_type):
 
 def count_blocks(folder, session, agent, since, until):
     name = git_gate.MAIN if agent.id == LEAD else agent.id
-    log = os.path.join(folder, session, git_gate.BLOCK_LOG, f"{name}.jsonl")
+    log = os.path.join(folder, session, git_gate.BLOCK_LOG, f"{name}{context_size.JSONL}")
     times = (recorded_time(entry.get("time")) for entry in lines(log))
     return sum(1 for moment in times if moment is not None and within(moment, since, until))
 
@@ -179,16 +181,17 @@ def count_blocks(folder, session, agent, since, until):
 def session_agents(folder, session, since, until, seen):
     """The lead and each subagent of a session with a response in the window."""
     lead = Agent(session, LEAD, LEAD)
-    read_transcript(lead, os.path.join(folder, f"{session}.jsonl"), since, until, seen)
+    read_transcript(lead, os.path.join(folder, f"{session}{context_size.JSONL}"), since, until, seen)
     agents = [lead]
     subagents = os.path.join(folder, session, context_size.SUBAGENTS)
     for name in sorted(os.listdir(subagents)) if os.path.isdir(subagents) else []:
-        if not (name.startswith("agent-") and name.endswith(".jsonl")):
+        if not (name.startswith(context_size.SUBAGENT) and name.endswith(context_size.JSONL)):
             continue
-        agent_id = name[len("agent-"):-len(".jsonl")]
-        meta = next(lines(os.path.join(subagents, f"agent-{agent_id}.meta.json")), None) or {}
+        agent_id = name[len(context_size.SUBAGENT):-len(context_size.JSONL)]
+        transcript = context_size.subagent_transcript(os.path.join(folder, session), agent_id)
+        meta = next(lines(os.path.splitext(transcript)[0] + META), None) or {}
         agent = Agent(session, agent_id, role_of(meta.get("agentType")))
-        read_transcript(agent, os.path.join(subagents, name), since, until, seen)
+        read_transcript(agent, transcript, since, until, seen)
         agents.append(agent)
     by_id = {agent.id: agent for agent in agents}
     for agent_id in lead.resumed:
@@ -210,8 +213,8 @@ def cost(response, prices, us_only_multiplier):
     price = price_of(response.model, prices)
     if price is None or response.speed == FAST:
         return None
-    if "long" in price and response.prompt() > price["long"]["over"]:
-        price = price["long"]
+    if LONG in price and response.prompt > price[LONG]["over"]:
+        price = price[LONG]
     spent = (response.fresh * price["input"] + response.write_5m * price["cache_write_5m"]
              + response.write_1h * price["cache_write_1h"] + response.read * price["cache_read"]
              + response.output * price["output"]) / 1_000_000
@@ -297,9 +300,12 @@ def role_row(role, members, by_agent):
 
 def dispatch_row(role, model, members, by_agent):
     """A role and model's spread per dispatch: the median and the largest agent."""
-    costs = [by_agent[agent].cost for agent in members]
+    totals = [by_agent[agent] for agent in members]
+    costs = [total.cost for total in totals]
     return [role, model, len(members), spread([len(agent.responses) for agent in members]),
             spread([sum(agent.tools.values()) for agent in members]), spread([agent.minutes() for agent in members]),
+            spread([total.fresh for total in totals]), spread([total.writes for total in totals]),
+            spread([total.read for total in totals]), spread([total.output for total in totals]),
             f"{money(median(costs))} / {money(max(costs))}"]
 
 
@@ -326,7 +332,8 @@ def report(agents, prices, us_only_multiplier):
                 money(totals.cost) + (f" (+{totals.unpriced} unpriced)" if totals.unpriced else "")]
                for model, totals in sorted(by_model.items(), key=lambda item: (-item[1].cost, item[0]))]),
         "## Per dispatch (median / max)",
-        table(["Role", "Model", "Agents", "Requests", "Tool calls", "Minutes", "Cost"], dispatch_rows),
+        table(["Role", "Model", "Agents", "Requests", "Tool calls", "Minutes", "Input", "Cache write", "Cache read",
+               "Output", "Cost"], dispatch_rows),
         "## Tool mix",
         table(["Role", "Most used tools"],
               [[role, ", ".join(f"{name} {count}" for name, count in
@@ -342,8 +349,7 @@ def report(agents, prices, us_only_multiplier):
 
 def project_folder(cwd):
     """Claude Code's folder for a project: its path with every character but letters and digits as a hyphen."""
-    config = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
-    return os.path.join(config, "projects", re.sub(r"[^A-Za-z0-9]", "-", os.path.abspath(cwd)))
+    return os.path.join(context_size.projects_folder(), re.sub(r"[^A-Za-z0-9]", "-", os.path.abspath(cwd)))
 
 
 def main(argv):
@@ -357,15 +363,16 @@ def main(argv):
     if not os.path.isdir(folder):
         print(f"No session files at {folder}.", file=sys.stderr)
         return 1
-    sessions = args.session or sorted(name[:-len(".jsonl")] for name in os.listdir(folder) if name.endswith(".jsonl"))
+    sessions = args.session or sorted(name[:-len(context_size.JSONL)] for name in os.listdir(folder)
+                                      if name.endswith(context_size.JSONL))
     with open(PRICES, encoding="utf-8") as file:
-        table_file = json.load(file)
+        prices = json.load(file)
     seen = set()
     agents = [agent for session in sessions for agent in session_agents(folder, session, args.since, args.until, seen)]
     if not agents:
         print("No agent activity in that window.", file=sys.stderr)
         return 1
-    print(report(agents, table_file["models"], table_file["us_only_multiplier"]), end="")
+    print(report(agents, prices["models"], prices["us_only_multiplier"]), end="")
     return 0
 
 

@@ -1,6 +1,8 @@
 """Tests for agent_report.py, on session files written the way Claude Code writes them. Run:
 python3 -m unittest discover -s plugins/sdlc-kit/scripts/tests"""
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import tempfile
@@ -100,10 +102,45 @@ class AgentReportTest(unittest.TestCase):
         self.assertEqual(1, len(self.agents()[(SESSION, "lead")].responses))
 
     def test_a_response_costs_each_kind_of_token_at_its_price(self):
-        spent = report.cost(response(fresh=MILLION, write_5m=MILLION, write_1h=MILLION, read=MILLION, output=MILLION),
-                            PRICES, US_ONLY)
+        spent = report.cost(response(fresh=MILLION, write_5m=2 * MILLION, write_1h=3 * MILLION, read=4 * MILLION,
+                                     output=5 * MILLION), PRICES, US_ONLY)
 
-        self.assertAlmostEqual(4 + 5 + 8 + 0.2 + 20, spent)
+        self.assertAlmostEqual(4 + 5 * 2 + 8 * 3 + 0.2 * 4 + 20 * 5, spent)
+
+    def test_a_1h_cache_write_count_above_all_cache_writes_is_capped_at_them(self):
+        moment = report.parse_time("2026-10-24T10:00:00Z")
+        written = report.response_of({"model": OPUS, "usage": {"cache_creation_input_tokens": 10,
+                                                               "cache_creation": {"ephemeral_1h_input_tokens": 50}}},
+                                     moment)
+
+        self.assertEqual((0, 10), (written.write_5m, written.write_1h))
+
+    def test_a_response_without_a_message_id_is_left_out(self):
+        nameless = assistant(None, "2026-10-24T10:00:00Z", fresh=1)
+        self.write(f"{SESSION}.jsonl", [nameless, nameless, assistant("m1", "2026-10-24T10:00:01Z", fresh=1)])
+
+        self.assertEqual(1, len(self.agents()[(SESSION, "lead")].responses))
+
+    def test_a_line_that_does_not_parse_and_a_block_that_is_not_an_object_are_skipped(self):
+        entry = assistant("m1", "2026-10-24T10:00:00Z", ["thinking", tool_use("b1", "Bash")], fresh=1)
+        result = tool_result("2026-10-24T10:00:01Z", is_error=True)
+        result["message"]["content"].insert(0, "text")
+        path = os.path.join(self.folder, f"{SESSION}.jsonl")
+        with open(path, "w", encoding="utf-8") as file:
+            file.write('{"type": "assistant", "timest\n' + json.dumps(entry) + "\n" + json.dumps(result) + "\n")
+
+        lead = self.agents()[(SESSION, "lead")]
+
+        self.assertEqual((1, {"Bash": 1}, 1), (len(lead.responses), dict(lead.tools), lead.errors))
+
+    def test_a_subagent_without_a_meta_file_and_a_tool_without_a_name_are_counted_as_unknown(self):
+        self.write(f"{SESSION}.jsonl", [assistant("m1", "2026-10-24T10:00:00Z", fresh=1)])
+        self.write(os.path.join(SESSION, "subagents", "agent-a1.jsonl"),
+                   [assistant("r1", "2026-10-24T10:00:00Z", [{"type": "tool_use", "id": "b1"}], fresh=1)])
+
+        agent = self.agents()[(SESSION, "a1")]
+
+        self.assertEqual(("unknown", {"?": 1}), (agent.role, dict(agent.tools)))
 
     def test_a_long_prompt_pays_the_long_prices_where_a_model_has_them(self):
         short = report.cost(response("claude-haiku-5-5", read=100_000, output=MILLION), PRICES, US_ONLY)
@@ -206,8 +243,10 @@ class AgentReportTest(unittest.TestCase):
                     "| developer | 1 | 0 | 2 | 1 | 0 | 0 | 8 | 88% | 340 | 0 / 0 | $0.00 |",
                     f"| {OPUS} | 2 | 2 | 1,000,000 | 2 | 0 | 1 | $4.00 |",
                     "| claude-new-model | 1 | 1 | 0 | 40 | 300 | 7 | $0.00 (+1 unpriced) |",
-                    f"| lead | {OPUS} | 1 | 1 / 1 | 1 / 1 | 0 / 0 | $4.00 / $4.00 |",
-                    "| developer | claude-new-model | 1 | 2 / 2 | 1 / 1 | 10 / 10 | $0.00 / $0.00 |",
+                    f"| lead | {OPUS} | 1 | 1 / 1 | 1 / 1 | 0 / 0 | 1,000,000 / 1,000,000 | 0 / 0 | 0 / 0 | 0 / 0 "
+                    "| $4.00 / $4.00 |",
+                    "| developer | claude-new-model | 1 | 2 / 2 | 1 / 1 | 10 / 10 | 0 / 0 | 42 / 42 | 300 / 300 "
+                    "| 8 / 8 | $0.00 / $0.00 |",
                     "| developer | Bash 1 |",
                     "Unpriced (fast mode, or not in prices.json), counted as $0: claude-new-model."):
             with self.subTest(row=row):
@@ -222,6 +261,7 @@ class AgentReportTest(unittest.TestCase):
         per_dispatch = text[text.index("## Per dispatch"):]
         self.assertLess(text.index("| lead | 1 |"), text.index("| developer | 1 |"))
         self.assertLess(per_dispatch.index(f"| lead | {OPUS} |"), per_dispatch.index(f"| developer | {OPUS} |"))
+        self.assertNotIn("Unpriced", text)
 
     def test_roles_that_cost_the_same_are_listed_by_name(self):
         self.write(f"{SESSION}.jsonl", [assistant("m1", "2026-10-24T10:00:00Z", output=1)])
@@ -245,7 +285,8 @@ class AgentReportTest(unittest.TestCase):
 
         text = report.report(list(self.agents().values()), PRICES, US_ONLY)
 
-        self.assertIn(f"| developer | {OPUS} | 3 | 2 / 4 | 1 / 3 | 10 / 30 | $40.00 / $80.00 |", text)
+        self.assertIn(f"| developer | {OPUS} | 3 | 2 / 4 | 1 / 3 | 10 / 30 | 0 / 0 | 0 / 0 | 0 / 0 "
+                      "| 2,000,000 / 4,000,000 | $40.00 / $80.00 |", text)
         self.assertIn("| developer | Bash 2, Read 1, Grep 1 |", text)
 
     def test_the_project_folder_is_named_after_the_project_path(self):
@@ -255,6 +296,37 @@ class AgentReportTest(unittest.TestCase):
         self.assertEqual(os.path.join(self.folder, "projects"), os.path.dirname(folder))
         self.assertTrue(os.path.basename(folder).endswith("-my-repo"))
         self.assertNotRegex(os.path.basename(folder), r"[^A-Za-z0-9-]")
+
+    def run_main(self, *argv):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = report.main(["--project", self.folder, *argv])
+        return code, out.getvalue(), err.getvalue()
+
+    def test_main_reports_the_sessions_asked_for_at_the_shipped_prices(self):
+        with open(report.PRICES, encoding="utf-8") as file:
+            shipped = json.load(file)
+        self.write("s1.jsonl", [assistant("m1", "2026-10-24T10:00:00Z", output=MILLION, geo="us")])
+        self.write("s2.jsonl", [assistant("m2", "2026-10-24T10:00:00Z", model="claude-haiku-4-5", output=1)])
+
+        code, text, _ = self.run_main("--session", "s1")
+        every = self.run_main()[1]
+
+        us_cost = report.money(shipped["models"][OPUS]["output"] * shipped["us_only_multiplier"])
+        self.assertEqual(0, code)
+        self.assertIn(f"| {OPUS} | 1 | 1 | 0 | 0 | 0 | 1,000,000 | {us_cost} |", text)
+        self.assertNotIn("claude-haiku-4-5", text)
+        self.assertIn("claude-haiku-4-5", every)
+
+    def test_main_fails_without_session_files_or_activity_in_the_window(self):
+        self.write("s1.jsonl", [assistant("m1", "2026-10-24T10:00:00Z", output=1)])
+
+        missing = self.run_main("--project", os.path.join(self.folder, "missing"))
+        empty = self.run_main("--since", "2026-10-25")
+
+        self.assertEqual((1, ""), missing[:2])
+        self.assertIn("No session files", missing[2])
+        self.assertEqual((1, "", "No agent activity in that window.\n"), empty)
 
     def test_the_shipped_prices_cover_every_field_the_cost_needs(self):
         with open(report.PRICES, encoding="utf-8") as file:
