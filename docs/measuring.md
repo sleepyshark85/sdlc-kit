@@ -308,12 +308,30 @@ Each row of the README's table, with its adherence and effect metrics, or why it
 ## The scorecard
 
 `scorecard.py wave <n>` (standard library and `gh`) runs at the end of a wave and writes `wave-<n>.md` to the owner's
-scorecard folder, outside the repository and any agent's checkout (by default `~/.sdlc/scorecards/<repository>/`).
+scorecard folder, outside the repository and any agent's checkout (by default `~/.sdlc/scorecards/<repository>/`,
+named after the repository without its owner). The owner runs it with the `scorecard` skill.
 
-- **The wave's window:** from its plan PR's merge to the next plan PR's merge. A PR belongs to the wave its `task`
-  names; a PR without one (a fix, a docs change) to the window it merged in.
+- **The wave's window:** from its plan PR's merge (the PR of branch `docs/plan-wave-<n>`) to the next plan PR's
+  merge, or to now while there is none. A PR belongs to the wave its `task` names (`W<n>-T<m>`); a PR without one
+  (a fix, a docs change) to the window it merged in.
+- **How the summary counts:**
+  - MG1's phases: first commit to opened (building), to the first verdict (waiting for review), to the last verdict
+    before the merge (rework), to the merge (waiting to merge); a PR with no verdict waits for review until it
+    merges. A verdict is a comment starting as the review gate's do. Each phase is the median over the wave's PRs.
+  - MN4 compares files: an unplanned fix (`kind: fix`, no task) is rework when it changes a file a PR merged before
+    it changed, since the start of the wave before.
+  - MN1 reads every daily check run on each of `main`'s heads in the window (every head a PR's merge commit), not
+    only the latest of each name, since a head can stay `main`'s for days: hours red run from a red run to the next
+    green one, or to the window's end; the time back to green is the median and the longest of the red spells that
+    ended green in the window, and a spell still red at the end is named.
+  - LN1's cost by role shows each role's tokens by kind (input, cache write, cache read, output) as `team-report`
+    does.
+  - LN2's own commits are the commits of the wave's PRs that no AI `Co-Authored-By` trailer names (in any case),
+    merge commits apart: git writes a merge's message, with no trailer, whoever merges.
+  - A number whose collector doesn't exist yet reads "no data", never 0.
 - **Sections:**
-  - the summary: DORA's five keys (MN2–MN4, MG1, MN11), cost (LN1, LN5) and the owner's load (LN2);
+  - the summary: DORA's five keys (MN2–MN4, MG1, MN11), the daily run (MN1), cost (LN1, LN5) and the owner's load
+    (LN2);
   - one row per README practice, from [Coverage](#coverage-every-practice): its numbers, the trend, and for a
     Trial practice the suggestion to keep or drop it;
   - escapes by cause (MN5), alerts (MN6), the audit's findings (RV7);
@@ -328,7 +346,13 @@ scorecard folder, outside the repository and any agent's checkout (by default `~
 | PR | What it adds | Metrics it enables |
 |---|---|---|
 | Recording | Done: the PR facts block (C3) in the conventions and the developer, fixer and reviewer definitions; `git-gate.py`'s block log (C6); the `Conflicts:` trailer (C4); `should-have-caught` (C12); the owner audit in the lead's routine (C13); the `(claim)` and `Withdrawn:` markers and the owner's ruling format (C2) | All but MN1, MN9, MN10 and those needing C14 |
-| Scorecard | `scorecard.py` (its readers include the repository settings, C16), its tests, and the scorecard page's template | Every metric above with data |
+| Scorecard: summary | Done: `scorecard.py wave <n>`, its window and facts block reader, and the summary; the owner's `scorecard` skill. The cost comes from `agent_report.py`. LN5 and the owner's audit time read "no data" | MN1, MN2, MN3, MN4, MG1, MN11; LN1; LN2 (escalations, own commits) |
+| Scorecard: practices | One row per README practice from [Coverage](#coverage-every-practice), and each number's trend against the earlier scorecards in the folder | The trends; LN3 |
+| Scorecard: escapes and audit | Escapes by cause, alerts (C10), and the audit's findings (C13) | MN5, MN6, MN7, RV7 |
+| Scorecard: review and build | The verdicts' rounds, must-fixes and markers (C2), sizes against the plan, CI runs (C9) and the hook block log (C6) | RV1–RV9, BU1–BU8, BU11, BU12, MG2–MG4, MN8, MN12 |
+| Scorecard: specs and plans | The project's docs (C5) and their history (C4) | SP1–SP8, PL1–PL8, MN9 |
+| Scorecard: agent team | Quality by role and model, joined to the dispatch log (C15); the reports' `Live spend:` lines | AG1–AG15; LN5 |
+| Scorecard: settings and thresholds | The repository settings (C16), the kit's version, and the numbers past a threshold with their actions | MG5, LN4 |
 | Release flags | Done (`docs/flags.md`, and the flags-on daily run) | MN9, PL8; MN1 with flags on |
 | Each pack | The code-health command and the test report (C14) | MN10, BU9, BU10 |
 | Daily run | Done: the scheduled run on `main` with defaults and with flags on (C11), its suite and flag variable named by each pack | MN1 |

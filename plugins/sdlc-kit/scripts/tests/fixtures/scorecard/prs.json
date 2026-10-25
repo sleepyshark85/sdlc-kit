@@ -1,0 +1,335 @@
+[
+ {
+  "number": 31,
+  "createdAt": "2026-10-15T20:00:00Z",
+  "mergedAt": "2026-10-16T02:00:00Z",
+  "body": "Docs.\n\n<!-- sdlc\ntask: none\nkind: docs\n-->",
+  "labels": [],
+  "files": [
+   {
+    "path": "README.md",
+    "additions": 2,
+    "deletions": 1,
+    "changeType": "MODIFIED"
+   }
+  ],
+  "comments": [],
+  "mergeCommit": {
+   "oid": "3111111111111111111111111111111111111111"
+  }
+ },
+ {
+  "number": 30,
+  "createdAt": "2026-10-14T06:00:00Z",
+  "mergedAt": "2026-10-15T00:00:00Z",
+  "body": "Wave 3's plan.\n\n<!-- sdlc\ntask: none\nkind: docs\n-->",
+  "labels": [],
+  "files": [
+   {
+    "path": "docs/plan/wave-3.md",
+    "additions": 80,
+    "deletions": 0,
+    "changeType": "ADDED"
+   }
+  ],
+  "comments": [
+   {
+    "author": {
+     "login": "reviewer-bot"
+    },
+    "authorAssociation": "COLLABORATOR",
+    "body": "**Verdict: APPROVE** at 3000000000000000000000000000000000000000",
+    "createdAt": "2026-10-14T18:00:00Z"
+   }
+  ],
+  "mergeCommit": {
+   "oid": "3033333333333333333333333333333333333333"
+  }
+ },
+ {
+  "number": 22,
+  "createdAt": "2026-10-14T12:00:00Z",
+  "mergedAt": "2026-10-16T00:00:00Z",
+  "body": "Switch the cart on.\n\n<!-- sdlc\ntask: W2-T2\nkind: switch-on\n-->",
+  "labels": [
+   {
+    "id": "LA_2",
+    "name": "enhancement",
+    "description": "",
+    "color": "a2eeef"
+   }
+  ],
+  "files": [
+   {
+    "path": "src/b.py",
+    "additions": 3,
+    "deletions": 1,
+    "changeType": "MODIFIED"
+   },
+   {
+    "path": "src/app.py",
+    "additions": 4,
+    "deletions": 0,
+    "changeType": "MODIFIED"
+   }
+  ],
+  "comments": [
+   {
+    "author": {
+     "login": "reviewer-bot"
+    },
+    "authorAssociation": "COLLABORATOR",
+    "body": "**Verdict: APPROVE** at 2200000000000000000000000000000000000000",
+    "createdAt": "2026-10-15T12:00:00Z"
+   }
+  ],
+  "mergeCommit": {
+   "oid": "2222222222222222222222222222222222222222"
+  }
+ },
+ {
+  "number": 26,
+  "createdAt": "2026-10-13T18:00:00Z",
+  "mergedAt": "2026-10-14T00:00:00Z",
+  "body": "A fix found while building.\n\n<!-- sdlc\ntask: none\nkind: fix\nescaped-from: none\n-->",
+  "labels": [],
+  "files": [
+   {
+    "path": "src/c.py",
+    "additions": 5,
+    "deletions": 2,
+    "changeType": "MODIFIED"
+   }
+  ],
+  "comments": [
+   {
+    "author": {
+     "login": "reviewer-bot"
+    },
+    "authorAssociation": "COLLABORATOR",
+    "body": "**Verdict: APPROVE** at 2600000000000000000000000000000000000000",
+    "createdAt": "2026-10-13T20:00:00Z"
+   }
+  ],
+  "mergeCommit": {
+   "oid": "2666666666666666666666666666666666666666"
+  }
+ },
+ {
+  "number": 25,
+  "createdAt": "2026-10-12T06:00:00Z",
+  "mergedAt": "2026-10-13T00:00:00Z",
+  "body": "A change with no facts block.",
+  "labels": [],
+  "files": [
+   {
+    "path": "src/new.py",
+    "additions": 9,
+    "deletions": 0,
+    "changeType": "ADDED"
+   }
+  ],
+  "comments": [
+   {
+    "author": {
+     "login": "owner"
+    },
+    "authorAssociation": "OWNER",
+    "body": "Replying to the review below:\n\n> **Verdict: CHANGES REQUESTED** at 2500000000000000000000000000000000000000",
+    "createdAt": "2026-10-12T12:00:00Z"
+   }
+  ],
+  "mergeCommit": {
+   "oid": "2555555555555555555555555555555555555555"
+  }
+ },
+ {
+  "number": 24,
+  "createdAt": "2026-10-11T18:00:00Z",
+  "mergedAt": "2026-10-12T00:00:00Z",
+  "body": "Wave 1's last task, merged late.\n\n<!-- sdlc\ntask: W1-T3\nkind: dark\n-->",
+  "labels": [],
+  "files": [
+   {
+    "path": "src/a.py",
+    "additions": 12,
+    "deletions": 0,
+    "changeType": "MODIFIED"
+   }
+  ],
+  "comments": [],
+  "mergeCommit": {
+   "oid": "2444444444444444444444444444444444444444"
+  }
+ },
+ {
+  "number": 23,
+  "createdAt": "2026-10-11T00:00:00Z",
+  "mergedAt": "2026-10-11T12:00:00Z",
+  "body": "Fix the empty cart.\n\n<!-- sdlc\ntask: none\nkind: fix\nescaped-from: #11\nshould-have-caught: tests\n-->",
+  "labels": [],
+  "files": [
+   {
+    "path": "src/a.py",
+    "additions": 2,
+    "deletions": 1,
+    "changeType": "MODIFIED"
+   }
+  ],
+  "comments": [
+   {
+    "author": {
+     "login": "reviewer-bot"
+    },
+    "authorAssociation": "COLLABORATOR",
+    "body": "**Verdict: APPROVE** at 2300000000000000000000000000000000000000",
+    "createdAt": "2026-10-11T06:00:00Z"
+   }
+  ],
+  "mergeCommit": {
+   "oid": "2333333333333333333333333333333333333333"
+  }
+ },
+ {
+  "number": 21,
+  "createdAt": "2026-10-09T00:00:00Z",
+  "mergedAt": "2026-10-10T00:00:00Z",
+  "body": "The cart.\n\n<!-- sdlc\ntask: W2-T1\nkind: dark\n-->",
+  "labels": [
+   {
+    "id": "LA_1",
+    "name": "owner-decision",
+    "description": "",
+    "color": "d73a4a"
+   }
+  ],
+  "files": [
+   {
+    "path": "src/b.py",
+    "additions": 120,
+    "deletions": 0,
+    "changeType": "ADDED"
+   }
+  ],
+  "comments": [
+   {
+    "author": {
+     "login": "reviewer-bot"
+    },
+    "authorAssociation": "COLLABORATOR",
+    "body": "**Verdict: CHANGES REQUESTED** at 2100000000000000000000000000000000000000\n\n1. [tests] ...",
+    "createdAt": "2026-10-09T06:00:00Z"
+   },
+   {
+    "author": {
+     "login": "owner"
+    },
+    "authorAssociation": "OWNER",
+    "body": "Merging once the checks pass.",
+    "createdAt": "2026-10-09T19:00:00Z"
+   },
+   {
+    "author": {
+     "login": "reviewer-bot"
+    },
+    "authorAssociation": "COLLABORATOR",
+    "body": "**Verdict: APPROVE** at 2100000000000000000000000000000000000001",
+    "createdAt": "2026-10-09T18:00:00Z"
+   },
+   {
+    "author": {
+     "login": "reviewer-bot"
+    },
+    "authorAssociation": "COLLABORATOR",
+    "body": "**Verdict: APPROVE** at 2100000000000000000000000000000000000001 (posted after the merge)",
+    "createdAt": "2026-10-10T06:00:00Z"
+   },
+   {
+    "author": {
+     "login": "reviewer-bot"
+    },
+    "authorAssociation": "COLLABORATOR",
+    "body": "**Verdict: APPROVE** at 2100000000000000000000000000000000000001 (posted as it merged)",
+    "createdAt": "2026-10-10T00:00:00Z"
+   }
+  ],
+  "mergeCommit": {
+   "oid": "2111111111111111111111111111111111111111"
+  }
+ },
+ {
+  "number": 20,
+  "createdAt": "2026-10-07T00:00:00Z",
+  "mergedAt": "2026-10-08T00:00:00Z",
+  "body": "Wave 2's plan.\n\n<!-- sdlc\ntask: none\nkind: docs\n-->",
+  "labels": [],
+  "files": [
+   {
+    "path": "docs/plan/wave-2.md",
+    "additions": 90,
+    "deletions": 0,
+    "changeType": "ADDED"
+   }
+  ],
+  "comments": [
+   {
+    "author": {
+     "login": "reviewer-bot"
+    },
+    "authorAssociation": "COLLABORATOR",
+    "body": "**Verdict: APPROVE** at 2000000000000000000000000000000000000000",
+    "createdAt": "2026-10-07T12:00:00Z"
+   }
+  ],
+  "mergeCommit": {
+   "oid": "2022222222222222222222222222222222222222"
+  }
+ },
+ {
+  "number": 11,
+  "createdAt": "2026-10-02T00:00:00Z",
+  "mergedAt": "2026-10-03T00:00:00Z",
+  "body": "The cart's lines.\n\n<!-- sdlc\ntask: W1-T1\nkind: dark\n-->",
+  "labels": [],
+  "files": [
+   {
+    "path": "src/a.py",
+    "additions": 40,
+    "deletions": 0,
+    "changeType": "ADDED"
+   }
+  ],
+  "comments": [
+   {
+    "author": {
+     "login": "reviewer-bot"
+    },
+    "authorAssociation": "COLLABORATOR",
+    "body": "**Verdict: APPROVE** at 1100000000000000000000000000000000000000",
+    "createdAt": "2026-10-02T12:00:00Z"
+   }
+  ],
+  "mergeCommit": {
+   "oid": "1111111111111111111111111111111111111111"
+  }
+ },
+ {
+  "number": 10,
+  "createdAt": "2026-09-30T00:00:00Z",
+  "mergedAt": "2026-10-01T00:00:00Z",
+  "body": "Wave 1's plan.\n\n<!-- sdlc\ntask: none\nkind: docs\n-->",
+  "labels": [],
+  "files": [
+   {
+    "path": "docs/plan/wave-1.md",
+    "additions": 70,
+    "deletions": 0,
+    "changeType": "ADDED"
+   }
+  ],
+  "comments": [],
+  "mergeCommit": {
+   "oid": "1011111111111111111111111111111111111111"
+  }
+ }
+]

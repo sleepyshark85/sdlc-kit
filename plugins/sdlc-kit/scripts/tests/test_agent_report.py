@@ -72,9 +72,8 @@ class AgentReportTest(unittest.TestCase):
         self.write(os.path.join(session, "subagents", f"agent-{agent_id}.meta.json"), [{"agentType": agent_type}])
 
     def agents(self, since=None, until=None, sessions=(SESSION,)):
-        seen = set()
-        found = [agent for session in sessions for agent in report.session_agents(
-            self.folder, session, since and report.parse_time(since), until and report.parse_time(until), seen)]
+        found = report.read_team(self.folder, sessions, since and report.parse_time(since),
+                                 until and report.parse_time(until))
         return {(agent.session, agent.id): agent for agent in found}
 
     def test_a_response_written_as_several_entries_counts_once(self):
@@ -288,6 +287,14 @@ class AgentReportTest(unittest.TestCase):
         self.assertIn(f"| developer | {OPUS} | 3 | 2 / 4 | 1 / 3 | 10 / 30 | 0 / 0 | 0 / 0 | 0 / 0 "
                       "| 2,000,000 / 4,000,000 | $40.00 / $80.00 |", text)
         self.assertIn("| developer | Bash 2, Read 1, Grep 1 |", text)
+
+    def test_a_projects_sessions_are_its_transcripts_not_its_folders_or_other_files(self):
+        self.write("s2.jsonl", [])
+        self.write(os.path.join("s1", "subagents", "agent-a.jsonl"), [])
+        self.write("s1.jsonl", [])
+        self.write("notes.txt", [])
+
+        self.assertEqual(["s1", "s2"], report.sessions_in(self.folder))
 
     def test_the_project_folder_is_named_after_the_project_path(self):
         with mock.patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": self.folder}):

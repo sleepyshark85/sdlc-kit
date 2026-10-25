@@ -85,7 +85,8 @@ Four layers, as watching only the first two is how teams conclude AI made them f
 [`measuring.md`](measuring.md) details each measure: the phase and practice it belongs to, how it is collected, and
 what it tells the owner, the agent team's activity, cost and quality included. The kit carries the conventions they
 need (cause labels, the PR facts block, the `owner-decision` label and the owner's ruling, the audit); the
-collectors still missing and the scorecard script that reads them are [planned](../README.md#planned).
+scorecard script writes each wave's summary, and the collectors still missing and its other sections are
+[planned](../README.md#planned).
 
 ## Changing the process
 
