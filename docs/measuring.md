@@ -320,9 +320,14 @@ named after the repository without its owner). The owner runs it with the `score
     merges. A verdict is a comment starting as the review gate's do. Each phase is the median over the wave's PRs.
   - MN4 compares files: an unplanned fix (`kind: fix`, no task) is rework when it changes a file a PR merged before
     it changed, since the start of the wave before.
-  - MN1 reads the daily run's check runs on each of `main`'s heads in the window (every head a PR's merge commit):
-    hours red run from a red run to the next green one, or to the window's end.
-  - LN2's own commits are the commits of the wave's PRs that no AI `Co-Authored-By` trailer names.
+  - MN1 reads every daily check run on each of `main`'s heads in the window (every head a PR's merge commit), not
+    only the latest of each name, since a head can stay `main`'s for days: hours red run from a red run to the next
+    green one, or to the window's end; the time back to green is the median and the longest of the red spells that
+    ended green in the window, and a spell still red at the end is named.
+  - LN1's cost by role shows each role's tokens by kind (input, cache write, cache read, output) as `team-report`
+    does.
+  - LN2's own commits are the commits of the wave's PRs that no AI `Co-Authored-By` trailer names (in any case),
+    merge commits apart: git writes a merge's message, with no trailer, whoever merges.
   - A number whose collector doesn't exist yet reads "no data", never 0.
 - **Sections:**
   - the summary: DORA's five keys (MN2–MN4, MG1, MN11), the daily run (MN1), cost (LN1, LN5) and the owner's load

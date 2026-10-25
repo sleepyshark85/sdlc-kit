@@ -12,7 +12,6 @@ it. --project is the folder of the project's session files, as for agent_report.
 This slice writes the summary: DORA's five keys (MN11, MG1, MN2, MN3, MN4), the daily run (MN1), cost (LN1, LN5) and
 the owner's load (LN2). A number the kit has no collector for yet reads "no data", never 0."""
 import argparse
-import importlib.util
 import json
 import os
 import re
@@ -24,18 +23,11 @@ from datetime import datetime, timezone
 from statistics import median
 
 SCRIPTS = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, SCRIPTS)
+import agent_report  # noqa: E402  (found through the path above)
 
-
-def load_module(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-agent_report = load_module("agent_report", os.path.join(SCRIPTS, "agent_report.py"))
-review_gate = load_module("review_gate", os.path.join(os.path.dirname(SCRIPTS), "template", ".github",
-                                                      "review_gate.py"))
+review_gate = agent_report.load_module("review_gate", os.path.join(os.path.dirname(SCRIPTS), "template", ".github",
+                                                                   "review_gate.py"))
 
 WAVE = "wave"
 SCORECARDS = os.path.join("~", ".sdlc", "scorecards")
@@ -43,12 +35,23 @@ GIT_FOLDER = ".git"
 GH_TIMEOUT_SECONDS = 120
 PR_LIMIT = 1000
 PLAN_BRANCH = "docs/plan-wave-{}"
-PLAN_FIELDS = "number,mergedAt"
-PR_FIELDS = "number,createdAt,mergedAt,body,labels,files,comments,mergeCommit"
+# The fields read from GitHub's answers, each named once: gh's --json and --jq field lists are built from them.
+REPOSITORY_NAME = "nameWithOwner"
+NUMBER, CREATED, MERGED, BODY = "number", "createdAt", "mergedAt", "body"
+LABELS, FILES, COMMENTS, MERGE_COMMIT = "labels", "files", "comments", "mergeCommit"
+NAME, PATH, OID = "name", "path", "oid"
+AUTHORED, MESSAGE, PARENTS = "authored", "message", "parents"
+CONCLUSION, COMPLETED = "conclusion", "completed_at"
+PLAN_FIELDS = ",".join((NUMBER, MERGED))
+PR_FIELDS = ",".join((NUMBER, CREATED, MERGED, BODY, LABELS, FILES, COMMENTS, MERGE_COMMIT))
 COMMITS = "repos/{}/pulls/{}/commits"
-COMMIT_FIELDS = ".[] | {authored: .commit.author.date, message: .commit.message}"
-CHECK_RUNS = "repos/{}/commits/{}/check-runs"
-CHECK_RUN_FIELDS = ".check_runs[] | {name, conclusion, completed_at}"
+COMMIT_FIELDS = (f".[] | {{{AUTHORED}: .commit.author.date, {MESSAGE}: .commit.message, "
+                 f"{PARENTS}: (.parents | length)}}")
+# Every check run of the commit: GitHub's default (filter=latest) keeps only the newest of each name, which would drop
+# all but the last daily run on a head that stays main's for days.
+CHECK_RUNS = "repos/{}/commits/{}/check-runs?filter=all"
+CHECK_RUN_FIELDS = f".check_runs[] | {{{NAME}, {CONCLUSION}, {COMPLETED}}}"
+MERGE_PARENTS = 2
 DAILY_RUNS = ("daily (defaults)", "daily (flags-on)")
 GREEN = "success"
 RED = frozenset({"failure", "timed_out"})
@@ -96,7 +99,15 @@ def task_wave(facts):
 
 
 def hours(start, end):
+    """The hours from one time to another."""
     return (end - start).total_seconds() / 3600
+
+
+def own_commits(commits):
+    """LN2: the commits no AI co-author trailer names, merge commits apart: git writes their message, with no
+    trailer, whoever merges."""
+    return sum(1 for commit in commits
+               if commit[PARENTS] < MERGE_PARENTS and not AI_TRAILER.search(commit[MESSAGE]))
 
 
 @dataclass
@@ -110,8 +121,9 @@ class Merge:
 
     @classmethod
     def of(cls, item):
-        return cls(item["number"], agent_report.parse_time(item["mergedAt"]), facts_of(item["body"]),
-                   frozenset(file["path"] for file in item["files"]), item["mergeCommit"]["oid"])
+        """From its gh pr list item."""
+        return cls(item[NUMBER], agent_report.parse_time(item[MERGED]), facts_of(item[BODY]),
+                   frozenset(file[PATH] for file in item[FILES]), item[MERGE_COMMIT][OID])
 
 
 @dataclass
@@ -126,15 +138,15 @@ class PullRequest(Merge):
     @classmethod
     def of_wave(cls, item, commits):
         """From its gh pr list item and its commits. Verdicts are the times of the comments before the merge that
-        start as the review gate's do; the owner's own commits are those no AI co-author trailer names."""
+        start as the review gate's do."""
         merge = Merge.of(item)
-        posted = [agent_report.parse_time(comment["createdAt"]) for comment in item["comments"]
-                  if comment["body"].startswith(review_gate.VERDICT_PREFIX)]
-        return cls(**vars(merge), opened=agent_report.parse_time(item["createdAt"]),
-                   labels=frozenset(label["name"] for label in item["labels"]),
+        posted = [agent_report.parse_time(comment[CREATED]) for comment in item[COMMENTS]
+                  if comment[BODY].startswith(review_gate.VERDICT_PREFIX)]
+        return cls(**vars(merge), opened=agent_report.parse_time(item[CREATED]),
+                   labels=frozenset(label[NAME] for label in item[LABELS]),
                    verdicts=sorted(time for time in posted if time < merge.merged),
-                   first_commit=min(agent_report.parse_time(commit["authored"]) for commit in commits),
-                   own_commits=sum(1 for commit in commits if not AI_TRAILER.search(commit["message"])))
+                   first_commit=min(agent_report.parse_time(commit[AUTHORED]) for commit in commits),
+                   own_commits=own_commits(commits))
 
     def phases(self):
         """MG1's lead time in hours: first commit to opened, to the first verdict, to the last, to the merge. A PR
@@ -162,20 +174,24 @@ class Window:
 
     @property
     def until(self):
+        """The window's end: the next wave's plan PR's merge, or now while there is none."""
         return self.next_plan.merged if self.next_plan else self.now
 
     def holds(self, moment):
+        """Whether the moment is in the window: from its start, and before its end."""
         return self.plan.merged <= moment < self.until
 
 
 def plan_of(gh, wave):
     """The wave's merged plan PR (the first merged, if its branch was used twice), or None."""
-    plans = [Plan(item["number"], agent_report.parse_time(item["mergedAt"])) for item in json.loads(
+    plans = [Plan(item[NUMBER], agent_report.parse_time(item[MERGED])) for item in json.loads(
         gh("pr", "list", "--state", "merged", "--head", PLAN_BRANCH.format(wave), "--json", PLAN_FIELDS))]
     return min(plans, key=lambda plan: plan.merged, default=None)
 
 
 def window_of(gh, wave, now):
+    """The wave's window, from its plan PR and the plan PRs of the waves before and after it; refused without a
+    merged plan PR."""
     plan = plan_of(gh, wave)
     if plan is None:
         raise ScorecardError(f"Wave {wave} has no merged plan PR (branch {PLAN_BRANCH.format(wave)}).")
@@ -194,11 +210,13 @@ def merged_since(gh, since):
 
 
 def in_wave(merge, window):
+    """Whether the merged PR is the wave's: its task names the wave, or it has none and merged in the window."""
     named = task_wave(merge.facts)
     return named == window.wave if named is not None else window.holds(merge.merged)
 
 
 def json_lines(text):
+    """The values gh prints for --jq over a list, one JSON value per line."""
     return [json.loads(line) for line in text.splitlines()]
 
 
@@ -219,24 +237,25 @@ def daily_runs(gh, repository, heads, window):
     runs = defaultdict(list)
     for sha in heads:
         for run in json_lines(gh("api", CHECK_RUNS.format(repository, sha), "--paginate", "--jq", CHECK_RUN_FIELDS)):
-            if run["name"] not in DAILY_RUNS or not run["completed_at"]:
+            if run[NAME] not in DAILY_RUNS or not run[COMPLETED]:
                 continue
-            completed = agent_report.parse_time(run["completed_at"])
+            completed = agent_report.parse_time(run[COMPLETED])
             if window.holds(completed):
-                runs[run["name"]].append((completed, run["conclusion"]))
+                runs[run[NAME]].append((completed, run[CONCLUSION]))
     return {name: sorted(found) for name, found in runs.items()}
 
 
-def hours_red(runs, until):
-    """MN1: the hours from each red run to the next green one, or to the window's end."""
-    total, red_since = 0.0, None
+def red_spells(runs, until):
+    """MN1: each spell from a red run to the next green one, as (hours, back to green); a spell still red at the
+    window's end runs to it."""
+    spells, red_since = [], None
     for completed, conclusion in runs:
         if conclusion in RED and red_since is None:
             red_since = completed
         elif conclusion == GREEN and red_since is not None:
-            total += hours(red_since, completed)
+            spells.append((hours(red_since, completed), True))
             red_since = None
-    return total + (hours(red_since, until) if red_since else 0.0)
+    return spells + ([(hours(red_since, until), False)] if red_since else [])
 
 
 def reworks(prs, recent):
@@ -249,8 +268,7 @@ def team_by_role(folder, window):
     """LN1: the agent team's totals in the window by role, as {role: (agents, Totals)}; empty without sessions."""
     agents = agent_report.read_team(folder, agent_report.sessions_in(folder), window.plan.merged,
                                     window.until) if os.path.isdir(folder) else []
-    prices = agent_report.load_prices()
-    by_agent = agent_report.priced(agents, prices["models"], prices["us_only_multiplier"])[0]
+    by_agent = agent_report.priced(agents, *agent_report.load_prices())[0]
     agents_by_role, totals_by_role = Counter(), defaultdict(agent_report.Totals)
     for agent, totals in by_agent.items():
         agents_by_role[agent.role] += 1
@@ -258,19 +276,48 @@ def team_by_role(folder, window):
     return {role: (agents_by_role[role], totals) for role, totals in totals_by_role.items()}
 
 
+@dataclass
+class Reading:
+    """Everything a wave's scorecard shows, read before any of it is written."""
+    repository: str
+    window: Window
+    recent: list
+    prs: list
+    runs: dict
+    team: dict
+
+
+def read(gh, repository, window, folder):
+    """The wave's reading: every PR merged since the wave before and the wave's own, the daily runs on main's heads
+    in the window, and the agent team from the session files in the folder."""
+    recent, prs = read_wave(gh, repository, window)
+    heads = [merge.merge_commit for merge in recent if window.holds(merge.merged)]
+    return Reading(repository, window, recent, prs, daily_runs(gh, repository, heads, window),
+                   team_by_role(folder, window))
+
+
 def share(part, whole):
+    """The part of the whole, with its percentage when there is a whole."""
     return f"{part} of {whole} ({part / whole:.0%})" if whole else f"{part} of 0"
 
 
 def hours_text(value):
+    """Hours as the scorecard writes them."""
     return f"{value:.1f} h"
 
 
+def spread_text(values):
+    """The median and the longest of hours."""
+    return f"{hours_text(median(values))} / {hours_text(max(values))}"
+
+
 def per(total, count):
+    """A cost per item, or - with no items."""
     return agent_report.money(total / count) if count else "-"
 
 
 def switched_on(prs):
+    """How many of the PRs switch a feature on."""
     return sum(1 for pr in prs if pr.facts.get(KIND) == SWITCH_ON)
 
 
@@ -288,7 +335,7 @@ def restore_time(escapes):
     if not escapes:
         return "no fixes"
     restore = [hours(pr.opened, pr.merged) for pr in escapes]
-    return f"{hours_text(median(restore))} / {hours_text(max(restore))} (n={len(restore)})"
+    return f"{spread_text(restore)} (n={len(restore)})"
 
 
 def flow_rows(prs, recent):
@@ -306,11 +353,19 @@ def flow_rows(prs, recent):
     ]
 
 
+def daily_run(runs, until):
+    """MN1 for one daily run: its runs, red runs, hours red, and the time back to green of the spells that ended."""
+    spells = red_spells(runs, until)
+    back = [spell for spell, green in spells if green]
+    return (f"{len(runs)}, {sum(1 for _, conclusion in runs if conclusion in RED)}, "
+            f"{hours_text(sum(spell for spell, _ in spells))}, {spread_text(back) if back else NONE}"
+            + ("; red at the window's end" if len(back) < len(spells) else ""))
+
+
 def daily_rows(runs, until):
     """MN1, one row per daily run; no data when the project has no daily run."""
-    return [["MN1", f"Daily run `{name}`: runs, red, hours red",
-             f"{len(runs[name])}, {sum(1 for _, conclusion in runs[name] if conclusion in RED)}, "
-             f"{hours_text(hours_red(runs[name], until))}" if name in runs else NO_DATA] for name in DAILY_RUNS]
+    return [["MN1", f"Daily run `{name}`: runs, red, hours red, back to green (median / longest)",
+             daily_run(runs[name], until) if name in runs else NO_DATA] for name in DAILY_RUNS]
 
 
 def team_cost(team, prs):
@@ -332,37 +387,41 @@ def cost_rows(team, prs):
         ["LN5", "Live API spend", NO_DATA],
         ["LN2", "Escalations to the owner (`owner-decision`)", sum(1 for pr in prs if OWNER_DECISION in pr.labels)],
         ["LN2", "The owner's audit time", NO_DATA],
-        ["LN2", "The owner's own commits (no AI co-author)", sum(pr.own_commits for pr in prs)],
+        ["LN2", "The owner's own commits (no AI co-author, merges apart)", sum(pr.own_commits for pr in prs)],
     ]
 
 
-def scorecard(gh, repository, window, folder):
-    """The scorecard's Markdown."""
-    recent, prs = read_wave(gh, repository, window)
-    heads = [merge.merge_commit for merge in recent if window.holds(merge.merged)]
-    team = team_by_role(folder, window)
+def role_table(team):
+    """LN1 by role: agents, requests, tokens by kind (as team-report shows them) and cost, the costliest first."""
+    return agent_report.table(
+        ["Role", "Agents", "Requests", "Input", "Cache write", "Cache read", "Output", "Cost"],
+        [[role, agents, totals.requests, f"{totals.fresh:,}", f"{totals.writes:,}", f"{totals.read:,}",
+          f"{totals.output:,}", agent_report.money(totals.cost)]
+         for role, (agents, totals) in sorted(team.items(), key=lambda item: (-item[1][1].cost, item[0]))])
+
+
+def scorecard(reading):
+    """The scorecard's Markdown, from the reading alone."""
+    window, prs = reading.window, reading.prs
     end = (f"{window.next_plan.merged:%Y-%m-%d %H:%M} UTC (plan PR #{window.next_plan.number})" if window.next_plan
            else f"{window.now:%Y-%m-%d %H:%M} UTC, in progress")
     parts = [
-        f"# Wave {window.wave}: {repository}",
+        f"# Wave {window.wave}: {reading.repository}",
         f"From {window.plan.merged:%Y-%m-%d %H:%M} UTC (plan PR #{window.plan.number}) to {end}. "
         f"{len(prs)} merged PRs: " + (", ".join(f"#{pr.number}" for pr in prs) or "none") + ".",
         "## Summary",
-        agent_report.table(["ID", "Metric", "Value"], flow_rows(prs, recent)
-                           + daily_rows(daily_runs(gh, repository, heads, window), window.until)
-                           + cost_rows(team, prs)),
+        agent_report.table(["ID", "Metric", "Value"], flow_rows(prs, reading.recent)
+                           + daily_rows(reading.runs, window.until) + cost_rows(reading.team, prs)),
         "No data: LN5 (no collector reads the reports' `Live spend:` lines yet), the owner's audit time (the owner "
         "records it here), and a daily run the project doesn't have.",
     ]
-    if team:
-        parts += ["## Cost by role (LN1)", agent_report.table(
-            ["Role", "Agents", "Requests", "Cost"],
-            [[role, agents, totals.requests, agent_report.money(totals.cost)] for role, (agents, totals) in
-             sorted(team.items(), key=lambda item: (-item[1][1].cost, item[0]))])]
+    if reading.team:
+        parts += ["## Cost by role (LN1)", role_table(reading.team)]
     return "\n\n".join(parts) + "\n"
 
 
 def inside_checkout(folder):
+    """Whether the folder is inside a git checkout: a .git in it or in a folder above it."""
     path = os.path.abspath(folder)
     while not os.path.exists(os.path.join(path, GIT_FOLDER)):
         if os.path.dirname(path) == path:
@@ -372,6 +431,7 @@ def inside_checkout(folder):
 
 
 def main(argv, gh=run_gh, now=None):
+    """Writes the scorecard the arguments ask for and prints its path; 1 with the reason when it can't."""
     parser = argparse.ArgumentParser(description="A wave's scorecard, for the owner.")
     commands = parser.add_subparsers(dest="command", required=True)
     wave = commands.add_parser(WAVE, help="the scorecard of one wave")
@@ -382,19 +442,19 @@ def main(argv, gh=run_gh, now=None):
     if args.n < 1:
         parser.error("a wave's number starts at 1")
     try:
-        repository = json.loads(gh("repo", "view", "--json", "nameWithOwner"))["nameWithOwner"]
+        repository = json.loads(gh("repo", "view", "--json", REPOSITORY_NAME))[REPOSITORY_NAME]
         out = args.out or os.path.join(os.path.expanduser(SCORECARDS), repository.split("/")[-1])
         if inside_checkout(out):
             raise ScorecardError(f"{out} is inside a git checkout, where agents would see the scorecard.")
         window = window_of(gh, args.n, now or datetime.now(timezone.utc))
-        text = scorecard(gh, repository, window, args.project or agent_report.project_folder(os.getcwd()))
+        reading = read(gh, repository, window, args.project or agent_report.project_folder(os.getcwd()))
     except ScorecardError as error:
         print(error, file=sys.stderr)
         return 1
     os.makedirs(out, exist_ok=True)
     path = os.path.join(out, f"{WAVE}-{args.n}.md")
     with open(path, "w", encoding="utf-8") as file:
-        file.write(text)
+        file.write(scorecard(reading))
     print(path)
     return 0
 

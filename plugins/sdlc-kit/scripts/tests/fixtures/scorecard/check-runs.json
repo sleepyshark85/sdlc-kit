@@ -6,7 +6,7 @@
  ],
  "2111111111111111111111111111111111111111": [
   {"name": "daily (defaults)", "conclusion": "failure", "completed_at": "2026-10-10T03:00:00Z"},
-  {"name": "daily (flags-on)", "conclusion": "success", "completed_at": "2026-10-10T03:00:00Z"},
+  {"name": "daily (flags-on)", "conclusion": "failure", "completed_at": "2026-10-10T03:00:00Z"},
   {"name": "daily (defaults)", "conclusion": "cancelled", "completed_at": "2026-10-11T03:00:00Z"},
   {"name": "daily (flags-on)", "conclusion": "success", "completed_at": "2026-10-11T03:00:00Z"}
  ],

@@ -51,7 +51,14 @@
   "createdAt": "2026-10-14T12:00:00Z",
   "mergedAt": "2026-10-16T00:00:00Z",
   "body": "Switch the cart on.\n\n<!-- sdlc\ntask: W2-T2\nkind: switch-on\n-->",
-  "labels": [],
+  "labels": [
+   {
+    "id": "LA_2",
+    "name": "enhancement",
+    "description": "",
+    "color": "a2eeef"
+   }
+  ],
   "files": [
    {
     "path": "src/b.py",
@@ -122,7 +129,16 @@
     "changeType": "ADDED"
    }
   ],
-  "comments": [],
+  "comments": [
+   {
+    "author": {
+     "login": "owner"
+    },
+    "authorAssociation": "OWNER",
+    "body": "Replying to the review below:\n\n> **Verdict: CHANGES REQUESTED** at 2500000000000000000000000000000000000000",
+    "createdAt": "2026-10-12T12:00:00Z"
+   }
+  ],
   "mergeCommit": {
    "oid": "2555555555555555555555555555555555555555"
   }
@@ -227,6 +243,14 @@
     "authorAssociation": "COLLABORATOR",
     "body": "**Verdict: APPROVE** at 2100000000000000000000000000000000000001 (posted after the merge)",
     "createdAt": "2026-10-10T06:00:00Z"
+   },
+   {
+    "author": {
+     "login": "reviewer-bot"
+    },
+    "authorAssociation": "COLLABORATOR",
+    "body": "**Verdict: APPROVE** at 2100000000000000000000000000000000000001 (posted as it merged)",
+    "createdAt": "2026-10-10T00:00:00Z"
    }
   ],
   "mergeCommit": {

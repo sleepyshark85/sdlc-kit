@@ -2,71 +2,88 @@
  "31": [
   {
    "authored": "2026-10-15T19:00:00Z",
-   "message": "Fix a link\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+   "message": "Fix a link\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>",
+   "parents": 1
   }
  ],
  "30": [
   {
    "authored": "2026-10-14T05:00:00Z",
-   "message": "Plan wave 3\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+   "message": "Plan wave 3\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+   "parents": 1
   }
  ],
  "22": [
   {
    "authored": "2026-10-14T00:00:00Z",
-   "message": "Register the cart\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+   "message": "Register the cart\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+   "parents": 1
   }
  ],
  "26": [
   {
    "authored": "2026-10-13T12:00:00Z",
-   "message": "Fix the rounding\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+   "message": "Fix the rounding\n\nCo-authored-by: Claude Sonnet 5.5 <noreply@anthropic.com>",
+   "parents": 1
   }
  ],
  "25": [
   {
    "authored": "2026-10-12T00:00:00Z",
-   "message": "Add a helper"
+   "message": "Add a helper",
+   "parents": 1
   }
  ],
  "24": [
   {
    "authored": "2026-10-11T12:00:00Z",
-   "message": "Add the cart's total\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+   "message": "Add the cart's total\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+   "parents": 1
   }
  ],
  "23": [
   {
    "authored": "2026-10-10T20:00:00Z",
-   "message": "Fix the empty cart\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
+   "message": "Fix the empty cart\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>",
+   "parents": 1
   }
  ],
  "21": [
   {
    "authored": "2026-10-08T16:00:00Z",
-   "message": "Add the cart\n\nThe cart holds lines.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+   "message": "Add the cart\n\nThe cart holds lines.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+   "parents": 1
   },
   {
    "authored": "2026-10-08T10:00:00Z",
-   "message": "Start the cart by hand"
+   "message": "Start the cart by hand",
+   "parents": 1
+  },
+  {
+   "authored": "2026-10-09T20:00:00Z",
+   "message": "Merge remote-tracking branch 'origin/main' into feature/cart",
+   "parents": 2
   }
  ],
  "20": [
   {
    "authored": "2026-10-06T20:00:00Z",
-   "message": "Plan wave 2\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+   "message": "Plan wave 2\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+   "parents": 1
   }
  ],
  "11": [
   {
    "authored": "2026-10-01T12:00:00Z",
-   "message": "Add the lines\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+   "message": "Add the lines\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+   "parents": 1
   }
  ],
  "10": [
   {
    "authored": "2026-09-29T20:00:00Z",
-   "message": "Plan wave 1\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+   "message": "Plan wave 1\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+   "parents": 1
   }
  ]
 }
