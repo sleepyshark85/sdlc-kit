@@ -43,6 +43,7 @@ plugins/sdlc-kit/
     new-project/                    scaffolds a project and walks the owner through their steps
     split-docs/                     grows the short requirements or architecture into full req42 or arc42 (templates/)
     team-report/                    the agent team's activity and cost by role and model, for the owner
+    scorecard/                      writes the wave's scorecard outside the repository, for the owner
   hooks/
     hooks.json                      wires the two hooks into every session that has the plugin
     git-gate.py                     git and GitHub rules, and the project's checks before a commit and a push,
@@ -52,6 +53,7 @@ plugins/sdlc-kit/
   scripts/
     new_project.py                  creates a project from the template; adds packs
     agent_report.py, prices.json    reads the session files: the agent team by role and model; the price table
+    scorecard.py                    a wave's scorecard from GitHub and the session files (the summary so far)
     tests/
   template/                         copied into a new project
     CLAUDE.md                       the project's working notes; imports the conventions
@@ -190,7 +192,7 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | The lead reads reports, not diffs | The lead's context is the costliest | `dispatch` *Lead's routine*; `agent-rules.md` *Report* | Guided |
 | A cause on every must-fix | Rework measured by cause, by script | `reviewer` *The verdict*; conventions *Code quality bar* | Guided |
 | Escaped defects traced to their PR, with the guard that should have caught them | Change failure rate; which guard to change | the facts block's `escaped-from` and `should-have-caught` (conventions *How we work*); `fixer`; `reviewer` check 9 | Guided |
-| Scorecard: cost, flow, quality and people per wave | Throughput alone inflates with AI | [`docs/measuring.md`](docs/measuring.md) (the metrics and collectors); the conventions above; the collectors and the script are planned | Planned |
+| Scorecard: cost, flow, quality and people per wave | Throughput alone inflates with AI | [`docs/measuring.md`](docs/measuring.md) (the metrics and collectors); the conventions above; the owner's `scorecard` skill and `scripts/scorecard.py`: the summary (DORA's five keys, the daily run, cost, the owner's load) per wave; its other sections are planned | Trial (summary); Planned (the rest) |
 | The agent team measured by role and model: activity, cost, quality | Choosing each role's model and instructions on evidence | [`docs/measuring.md`](docs/measuring.md#the-agent-team); the owner's `team-report` skill and `scripts/agent_report.py` (activity and cost: AG1, AG5, AG7; AG2, AG4, AG8 in part), on demand; quality by role comes with the scorecard | Trial (activity, cost); Planned (quality) |
 
 ### 8. Products that run a model
@@ -202,8 +204,9 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 
 ## Planned
 
-- **The scorecard:** the collectors [`docs/measuring.md`](docs/measuring.md#building-it) lists as new, then a script
-  that reads them per wave: a port of Officina's `sdlc-metrics.py` and `agent-usage.py`, made generic.
+- **The scorecard's other sections:** the slices [`docs/measuring.md`](docs/measuring.md#building-it) lists after
+  the summary (practices and trends, escapes and audit, review and build, specs and plans, the agent team's quality,
+  settings and thresholds), and the collectors it lists as new.
 - **A `sync` skill** that shows how a project's copied template files differ from the kit's current version.
 - **More packs:** Go and Ruby (from Officina's implementations), with their mutation tools.
 - **Releases:** semantic versions, API compatibility checks, SBOM and provenance, per pack.

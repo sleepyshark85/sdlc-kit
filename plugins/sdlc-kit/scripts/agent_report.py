@@ -352,6 +352,22 @@ def project_folder(cwd):
     return os.path.join(context_size.projects_folder(), re.sub(r"[^A-Za-z0-9]", "-", os.path.abspath(cwd)))
 
 
+def sessions_in(folder):
+    """The ids of the sessions a project's folder holds."""
+    return sorted(name[:-len(context_size.JSONL)] for name in os.listdir(folder) if name.endswith(context_size.JSONL))
+
+
+def read_team(folder, sessions, since, until):
+    """Every agent of the sessions with a response in the window, each message counted once across them."""
+    seen = set()
+    return [agent for session in sessions for agent in session_agents(folder, session, since, until, seen)]
+
+
+def load_prices():
+    with open(PRICES, encoding="utf-8") as file:
+        return json.load(file)
+
+
 def main(argv):
     parser = argparse.ArgumentParser(description="The agent team's activity and cost, by role and model.")
     parser.add_argument("--project", help="the project's folder of session files (default: the current folder's)")
@@ -363,12 +379,8 @@ def main(argv):
     if not os.path.isdir(folder):
         print(f"No session files at {folder}.", file=sys.stderr)
         return 1
-    sessions = args.session or sorted(name[:-len(context_size.JSONL)] for name in os.listdir(folder)
-                                      if name.endswith(context_size.JSONL))
-    with open(PRICES, encoding="utf-8") as file:
-        prices = json.load(file)
-    seen = set()
-    agents = [agent for session in sessions for agent in session_agents(folder, session, args.since, args.until, seen)]
+    prices = load_prices()
+    agents = read_team(folder, args.session or sessions_in(folder), args.since, args.until)
     if not agents:
         print("No agent activity in that window.", file=sys.stderr)
         return 1
