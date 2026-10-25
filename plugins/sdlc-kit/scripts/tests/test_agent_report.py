@@ -303,18 +303,17 @@ class AgentReportTest(unittest.TestCase):
             code = report.main(["--project", self.folder, *argv])
         return code, out.getvalue(), err.getvalue()
 
-    def test_main_reports_the_sessions_asked_for_at_the_shipped_prices(self):
-        with open(report.PRICES, encoding="utf-8") as file:
-            shipped = json.load(file)
+    def test_main_reports_the_sessions_asked_for_at_the_prices_file(self):
+        self.write("prices.json", [{"us_only_multiplier": US_ONLY, "models": PRICES}])
         self.write("s1.jsonl", [assistant("m1", "2026-10-24T10:00:00Z", output=MILLION, geo="us")])
         self.write("s2.jsonl", [assistant("m2", "2026-10-24T10:00:00Z", model="claude-haiku-4-5", output=1)])
 
-        code, text, _ = self.run_main("--session", "s1")
-        every = self.run_main()[1]
+        with mock.patch.object(report, "PRICES", os.path.join(self.folder, "prices.json")):
+            code, text, _ = self.run_main("--session", "s1")
+            every = self.run_main()[1]
 
-        us_cost = report.money(shipped["models"][OPUS]["output"] * shipped["us_only_multiplier"])
         self.assertEqual(0, code)
-        self.assertIn(f"| {OPUS} | 1 | 1 | 0 | 0 | 0 | 1,000,000 | {us_cost} |", text)
+        self.assertIn(f"| {OPUS} | 1 | 1 | 0 | 0 | 0 | 1,000,000 | $22.00 |", text)
         self.assertNotIn("claude-haiku-4-5", text)
         self.assertIn("claude-haiku-4-5", every)
 

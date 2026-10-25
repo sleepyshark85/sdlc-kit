@@ -20,7 +20,7 @@ CHUNK = 64 * 1024
 TAIL_LIMIT = 8 * 1024 * 1024
 SIZES = "context-sizes"
 SUBAGENTS = "subagents"
-SUBAGENT = "agent-"
+SUBAGENT_PREFIX = "agent-"
 JSONL = ".jsonl"
 MAIN = "main"
 INPUT = "input_tokens"
@@ -55,7 +55,7 @@ def prompt_tokens(usage):
 
 def subagent_transcript(session, agent_id):
     """The transcript of the session's subagent with that id."""
-    return os.path.join(session, SUBAGENTS, f"{SUBAGENT}{agent_id}{JSONL}")
+    return os.path.join(session, SUBAGENTS, f"{SUBAGENT_PREFIX}{agent_id}{JSONL}")
 
 
 def projects_folder():

@@ -185,9 +185,9 @@ def session_agents(folder, session, since, until, seen):
     agents = [lead]
     subagents = os.path.join(folder, session, context_size.SUBAGENTS)
     for name in sorted(os.listdir(subagents)) if os.path.isdir(subagents) else []:
-        if not (name.startswith(context_size.SUBAGENT) and name.endswith(context_size.JSONL)):
+        if not (name.startswith(context_size.SUBAGENT_PREFIX) and name.endswith(context_size.JSONL)):
             continue
-        agent_id = name[len(context_size.SUBAGENT):-len(context_size.JSONL)]
+        agent_id = name[len(context_size.SUBAGENT_PREFIX):-len(context_size.JSONL)]
         transcript = context_size.subagent_transcript(os.path.join(folder, session), agent_id)
         meta = next(lines(os.path.splitext(transcript)[0] + META), None) or {}
         agent = Agent(session, agent_id, role_of(meta.get("agentType")))
