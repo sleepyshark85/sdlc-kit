@@ -9,6 +9,30 @@ Status of each collector and metric:
 
 - **Exists:** the kit records it today.
 - **New:** to be built by the recording and scorecard PRs (see [Building it](#building-it)).
+- **Core or candidate:** of the metrics below, only the [core metrics](#the-core-metrics) are built ahead of need;
+  every other one is a candidate, designed here and built once a decision needs it.
+
+## The core metrics
+
+The scorecard is built for the decisions the owner takes after a wave, not for the catalogue below. Each core metric
+answers one of them:
+
+| The owner's decision | Core metrics | Built |
+|---|---|---|
+| Do defects escape, and which guard do we change? | MN2 change failure rate; MN5 escapes by `should-have-caught` | MN2; MN5 next |
+| Does work merge before it is done? | MN4 rework rate | Yes |
+| Where does work wait? | MG1 lead time by phase | Yes |
+| Where do the developer and the bar disagree: which guidance do we fix? | RV1 rounds and first-round approval; RV2 must-fixes by cause | Next |
+| Does review catch what it should? | RV7 reviewer recall, from the owner's audit | Next |
+| What does a merged PR cost, and in which role? | LN1 cost by role per merged PR | Yes |
+| What does the process take from the owner? | LN2 the owner's load | Yes |
+
+Beside them, MN11 (merged PRs by kind) keeps throughput in view, and MN1 (the daily run) is core once a project adds
+the daily run. LN3, a process change's metric before and after, is read on these.
+
+**A candidate becomes core** when, after a real wave, the owner names a decision the core metrics couldn't settle and
+the candidate would. The PR that builds it names that decision, as a process change names its metric. A candidate no
+decision has needed after a project's first few waves is a sign the catalogue, not the scorecard, should shrink.
 
 ## Principles
 
@@ -23,6 +47,9 @@ Status of each collector and metric:
   the owner, and no brief cites them.
 - **Per wave, trends over levels.** A wave is the unit: the scorecard compares each number with the waves before.
 - **A metric without an action is dropped.** Each row below says what to do when the number goes the wrong way.
+- **A metric is built when a decision needs it.** A designed metric costs nothing; a built one costs code, tests and
+  the owner's reading time every wave. So the scorecard builds the [core metrics](#the-core-metrics) first, and the
+  rest only on demand.
 
 ## Collectors
 
@@ -329,12 +356,15 @@ named after the repository without its owner). The owner runs it with the `score
   - LN2's own commits are the commits of the wave's PRs that no AI `Co-Authored-By` trailer names (in any case),
     merge commits apart: git writes a merge's message, with no trailer, whoever merges.
   - A number whose collector doesn't exist yet reads "no data", never 0.
-- **Sections:**
+- **Sections,** the summary first, then the rest of the core; each other section comes only with the candidates it
+  reads:
   - the summary: DORA's five keys (MN2–MN4, MG1, MN11), the daily run (MN1), cost (LN1, LN5) and the owner's load
     (LN2);
+  - the rest of the core: rounds and must-fixes by cause (RV1, RV2), escapes by guard (MN5), the audit's recall
+    (RV7), and each core metric's trend;
   - one row per README practice, from [Coverage](#coverage-every-practice): its numbers, the trend, and for a
     Trial practice the suggestion to keep or drop it;
-  - escapes by cause (MN5), alerts (MN6), the audit's findings (RV7);
+  - alerts (MN6, MN7);
   - the agent team: activity, cost and quality by role and by model (AG1–AG15);
   - the numbers past a threshold, each with the action from the tables above.
 - **The owner reads it** and decides: Trial practices kept or dropped, and the process changes for the next wave,
@@ -343,16 +373,20 @@ named after the repository without its owner). The owner runs it with the `score
 
 ## Building it
 
+Done, then next, then the candidates. A candidate row is built only as the [core metrics](#the-core-metrics) say: when
+a decision after a real wave needs one of its metrics, and then only that metric.
+
 | PR | What it adds | Metrics it enables |
 |---|---|---|
 | Recording | Done: the PR facts block (C3) in the conventions and the developer, fixer and reviewer definitions; `git-gate.py`'s block log (C6); the `Conflicts:` trailer (C4); `should-have-caught` (C12); the owner audit in the lead's routine (C13); the `(claim)` and `Withdrawn:` markers and the owner's ruling format (C2) | All but MN1, MN9, MN10 and those needing C14 |
 | Scorecard: summary | Done: `scorecard.py wave <n>`, its window and facts block reader, and the summary; the owner's `scorecard` skill. The cost comes from `agent_report.py`. LN5 and the owner's audit time read "no data" | MN1, MN2, MN3, MN4, MG1, MN11; LN1; LN2 (escalations, own commits) |
-| Scorecard: practices | One row per README practice from [Coverage](#coverage-every-practice), and each number's trend against the earlier scorecards in the folder | The trends; LN3 |
-| Scorecard: escapes and audit | Escapes by cause, alerts (C10), and the audit's findings (C13) | MN5, MN6, MN7, RV7 |
-| Scorecard: review and build | The verdicts' rounds, must-fixes and markers (C2), sizes against the plan, CI runs (C9) and the hook block log (C6) | RV1–RV9, BU1–BU8, BU11, BU12, MG2–MG4, MN8, MN12 |
-| Scorecard: specs and plans | The project's docs (C5) and their history (C4) | SP1–SP8, PL1–PL8, MN9 |
-| Scorecard: agent team | Quality by role and model, joined to the dispatch log (C15); the reports' `Live spend:` lines | AG1–AG15; LN5 |
-| Scorecard: settings and thresholds | The repository settings (C16), the kit's version, and the numbers past a threshold with their actions | MG5, LN4 |
 | Release flags | Done (`docs/flags.md`, and the flags-on daily run) | MN9, PL8; MN1 with flags on |
-| Each pack | The code-health command and the test report (C14) | MN10, BU9, BU10 |
 | Daily run | Done: the scheduled run on `main` with defaults and with flags on (C11), its suite and flag variable named by each pack | MN1 |
+| Scorecard: the rest of the core | Next: the verdicts' rounds and must-fixes by cause (C2), escapes by `should-have-caught` (C12), the audit's findings (C13), and each core metric's trend against the earlier scorecards | RV1, RV2, RV7, MN5; the core's trends; LN3 |
+| Candidate: practices | One row per README practice from [Coverage](#coverage-every-practice) | The practices' adherence and effect |
+| Candidate: escapes and alerts | Alerts (C10) and the OpenSSF result | MN6, MN7 |
+| Candidate: review and build | The rest of the verdicts' markers (C2), sizes against the plan, CI runs (C9) and the hook block log (C6) | RV3–RV6, RV8, RV9, BU1–BU8, BU11, BU12, MG2–MG4, MN8, MN12 |
+| Candidate: specs and plans | The project's docs (C5) and their history (C4) | SP1–SP8, PL1–PL8, MN9 |
+| Candidate: agent team | Quality by role and model, joined to the dispatch log (C15); the reports' `Live spend:` lines | AG1–AG15; LN5 |
+| Candidate: settings and thresholds | The repository settings (C16), the kit's version, and the numbers past a threshold with their actions | MG5, LN4 |
+| Candidate: each pack | The code-health command and the test report (C14) | MN10, BU9, BU10 |

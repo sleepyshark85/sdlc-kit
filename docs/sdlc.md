@@ -71,6 +71,25 @@ What keeps that flow safe is mostly mechanical, so it holds whatever an agent do
 | GitHub | Branch protection with every required check, up to date, admins included; the review gate trusting only the reviewer's identity and the owner's; merge commits only |
 | CI | Build with warnings as errors, tests on two systems, format, locked restore, vulnerable packages, CodeQL, diff-scoped mutation with survivors in the summary, the docs' links; the daily run on `main` with the defaults and with every flag on; weekly full mutation against the floor, flaky-test runs, Scorecard |
 
+## Core and opt-ins
+
+The kit's parts are of two kinds. The **core** is the process itself, and every project takes all of it: what sets
+the kit apart from a set of instructions is that its core is enforced and its review recorded, so none of it is
+optional. An **opt-in** answers a question the core doesn't; a project adds it when it has that question, not before.
+
+| Phase | Core | Opt-in, and when to add it |
+|---|---|---|
+| Specify | The short `REQUIREMENTS.md` (IDs, EARS criteria) and `ARCHITECTURE.md`; `docs/decisions.md`; `docs/traceability.md` | `split-docs` (req42, arc42): when a document passes its split trigger in the conventions |
+| Plan | `plan-wave`: tasks of one behaviour or contract, citing criteria; the plan PR | Release flags (`docs/flags.md`): when a feature needs more than one PR before it can be switched on |
+| Build | `developer`, `fixer`, `dispatch`; `git-gate.py`, `context-size.py`, the permission rules; the pack's build, tests, format and mutation on the diff | — |
+| Review and merge | `reviewer`, the review gate, the `quality` workflow, CodeQL, Dependabot, `setup-repo.sh` | — |
+| On `main` | — | The daily run: once flags are in use, or the full suite is too slow for every PR. The pack's weekly full mutation and flaky-test runs: once the code has a mutation floor worth holding. The OpenSSF Scorecard workflow: when others depend on the project |
+| Learn | The recording conventions (the facts block, cause labels, `escaped-from`, the audit); the scorecard's [core metrics](measuring.md#the-core-metrics) | `team-report`: when choosing a role's model or instructions. The scorecard's candidate metrics: see [`measuring.md`](measuring.md#the-core-metrics) |
+
+An opt-in is added, never removed in silence: dropping one is a process change like any other, and names its metric.
+Today `new-project` copies the core and the opt-ins together; scaffolding the core alone is
+[planned](../README.md#planned).
+
 ## Measuring
 
 Four layers, as watching only the first two is how teams conclude AI made them faster while it made them worse:
@@ -84,9 +103,9 @@ Four layers, as watching only the first two is how teams conclude AI made them f
 
 [`measuring.md`](measuring.md) details each measure: the phase and practice it belongs to, how it is collected, and
 what it tells the owner, the agent team's activity, cost and quality included. The kit carries the conventions they
-need (cause labels, the PR facts block, the `owner-decision` label and the owner's ruling, the audit); the
-scorecard script writes each wave's summary, and the collectors still missing and its other sections are
-[planned](../README.md#planned).
+need (cause labels, the PR facts block, the `owner-decision` label and the owner's ruling, the audit). The scorecard
+builds a short list of them, the [core metrics](measuring.md#the-core-metrics), each tied to a decision the owner
+takes; the rest are candidates, built only once a real wave shows a decision that needs one.
 
 ## Changing the process
 
