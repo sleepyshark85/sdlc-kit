@@ -9,6 +9,7 @@ practice (DORA, NIST SSDF, OWASP, OpenSSF).
 - **The process:** [`docs/sdlc.md`](docs/sdlc.md): the premise, roles, flow, guards and measures.
 - **What is measured, and how:** [`docs/measuring.md`](docs/measuring.md): each practice's metrics by phase, their
   collectors, and the agent team's activity, cost and quality.
+- **What every project takes, and what it adds when needed:** [`docs/sdlc.md`](docs/sdlc.md#core-and-opt-ins).
 - **The rules agents follow:** the template's [`docs/conventions.md`](plugins/sdlc-kit/template/docs/conventions.md).
 
 ## Getting started
@@ -101,6 +102,9 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
   says how it is kept or dropped.
 - **Planned:** not in this version; see [Planned](#planned).
 
+A status ending in *(opt-in)* is for a part a project adds when it needs it
+([core and opt-ins](docs/sdlc.md#core-and-opt-ins)); every other row is core.
+
 ### 1. Requirements and plan
 
 | Practice | Why | Covered by | Status |
@@ -108,7 +112,7 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | Spec before code, reviewed like code | Spec-driven development (GitHub Spec Kit, Kiro): the spec is what agents build from | `template/REQUIREMENTS.md`, `template/ARCHITECTURE.md`; conventions *How we work* (docs through PRs); `new-project` step 2 | Guided |
 | Structured, testable requirements with edge states | EARS: each criterion maps to a test | `template/REQUIREMENTS.md` §2; `split-docs` area template | Guided |
 | Criteria numbered once, cited by tasks | A criterion restated in a plan drifts from its requirement, and coverage can't be checked | `template/REQUIREMENTS.md` §2 (`AREA-01.2`); `plan-wave` *Tasks* and checklist; `template/docs/plan/template.md` (`Reads:`) | Trial |
-| Docs sized to the project: short forms, split by trigger into req42 and arc42 | A long single spec costs every agent context, and parallel tasks collide on it | `template/REQUIREMENTS.md`, `template/ARCHITECTURE.md` (short forms); conventions *Docs grow by splitting*; `split-docs`; `plan-wave` step 2; `cs-rules.py` reads both forms | Trial |
+| Docs sized to the project: short forms, split by trigger into req42 and arc42 | A long single spec costs every agent context, and parallel tasks collide on it | `template/REQUIREMENTS.md`, `template/ARCHITECTURE.md` (short forms); conventions *Docs grow by splitting*; `split-docs`; `plan-wave` step 2; `cs-rules.py` reads both forms | Trial (opt-in: the split) |
 | Traceability: every requirement has an ID, every test names it | A requirement without a test shows up | conventions *Tests*; `template/docs/traceability.md` (each area file's section once split); `developer` step 5 | Guided |
 | Ambiguity surfaced, not filled | Agents fill gaps silently and plausibly | *Assumptions* section: `developer` step 8, `reviewer` check 3, conventions; `plan-wave` step 1 | Trial |
 | Small, deliverable tasks of one behaviour or contract | Small batches (DORA); review cost grows faster than size | `plan-wave` *Tasks*; `template/docs/plan/template.md`; `dispatch` check *The task*; `developer` step 4 (stop and split) | Trial |
@@ -134,8 +138,8 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | The developer self-checks before review | Cheaper than a review round | `developer` step 6 (mutation on the diff, diff re-read, base merged) | Guided |
 | The code quality bar: good code, not working code | AI code is plausible and subtly wrong | conventions *Code quality bar*; `reviewer` check 6 | Guided |
 | Least privilege for agents | The coding agent is an attack surface | `template/.claude/settings.json` (deny rules); `git-gate.py`: no force push, no branch deletion, merge only with `--auto`, no repository settings | Enforced |
-| Unfinished work merges but is off on `main`; one switch-on task releases it | Trunk-based small PRs; `main` shows only finished features for the daily run and demos | `plan-wave` *Off on `main` until switched on* (composition, release flags, expand then contract); `developer` step 3; `reviewer` check 4; quality bar *PR scope*; `dotnet.md` (composition and the `Flags` class); the daily run on `main` shows a leak | Trial |
-| Release flags bounded: listed, off by default, one check point, removed within two waves of the switch-on | Flags are cheap to add and costly to keep; each doubles the paths to test | `template/docs/flags.md`; `plan-wave` (the leak table, removal tasks, checklist); quality bar *PR scope*; `reviewer` check 4; the daily run with every flag on | Trial |
+| Unfinished work merges but is off on `main`; one switch-on task releases it | Trunk-based small PRs; `main` shows only finished features for the daily run and demos | `plan-wave` *Off on `main` until switched on* (composition, release flags, expand then contract); `developer` step 3; `reviewer` check 4; quality bar *PR scope*; `dotnet.md` (composition and the `Flags` class); the daily run on `main` shows a leak | Trial (opt-in: flags) |
+| Release flags bounded: listed, off by default, one check point, removed within two waves of the switch-on | Flags are cheap to add and costly to keep; each doubles the paths to test | `template/docs/flags.md`; `plan-wave` (the leak table, removal tasks, checklist); quality bar *PR scope*; `reviewer` check 4; the daily run with every flag on | Trial (opt-in) |
 | Old code reshaped before the feature: preparatory refactor, parallel change, branch by abstraction | A feature that touches much old code merges in small PRs only once restructuring is apart from behaviour | `plan-wave` *When the feature changes old code*; `reviewer` check 4 (a refactor keeps behaviour) | Trial |
 | AI authorship visible, a person accountable | Accountability stays with a person | `developer` step 8 (attribution line); owner decides after round 3 | Guided |
 
@@ -149,7 +153,7 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | New dependencies justified | Package hallucination (slopsquatting) | quality bar *Dependencies*; `docs/decisions.md` *Dependencies* | Guided |
 | Least-privilege workflow tokens | OpenSSF Scorecard | every workflow's top-level `permissions`, checked by `workflow_rules.py` in the `quality` workflow | Enforced |
 | Actions pinned by commit sha, kept current | OpenSSF Scorecard, SLSA | every workflow, checked by `workflow_rules.py`; `dependabot.yml` (`github-actions`) | Enforced |
-| OpenSSF Scorecard | Supply-chain hygiene, measured | `template/.github/workflows/scorecard.yml` | Reported |
+| OpenSSF Scorecard | Supply-chain hygiene, measured | `template/.github/workflows/scorecard.yml` | Reported (opt-in) |
 | Locked dependency restores | Reproducible builds | .NET pack: `RestorePackagesWithLockFile`, `--locked-mode` in CI | Enforced |
 | SBOM and build provenance | SLSA | — | Planned |
 
@@ -160,11 +164,11 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | Only boundaries faked; fast, deterministic tests | Tests are the agent's check on its own work | conventions *Tests* | Guided |
 | Mutation testing on each PR's changed code | Google's diff-scoped mutation; a weak test passes review otherwise | .NET pack `dotnet-mutation.yml`; `developer` step 6; quality bar *Mutation* | Enforced |
 | Survivors visible on the PR | Agents fix what they can see | .NET pack `stryker_survivors.py` → job summary | Enforced |
-| Full mutation runs held to a floor | A floor that only reports erodes | .NET pack: weekly run fails below `break`; floors in `docs/decisions.md` | Enforced |
+| Full mutation runs held to a floor | A floor that only reports erodes | .NET pack: weekly run fails below `break`; floors in `docs/decisions.md` | Enforced (opt-in) |
 | Property and fuzz tests for parsers and validators | They find what examples miss | conventions *Tests* | Guided |
 | Generated tests kept only if they kill a mutant or pin a criterion | Meta's TestGen-LLM and mutation-guided generation | conventions *Tests*; `developer` step 6 | Guided |
-| Flaky tests found, not retried | A flaky test is a bug | .NET pack `dotnet-flaky` (weekly, five runs, two systems) | Enforced |
-| A daily run of the full suite on `main`, with the defaults and with every in-progress flag on | `main` stays releasable, and a flag's on path is tested before its switch-on (MN1) | `template/.github/workflows/daily.yml` and `daily.py`: the checks `daily (defaults)` and `daily (flags-on)`; each pack's `daily` suite, `flag_variable` and setup steps (`pack.toml`); `template/docs/flags.md` | Reported |
+| Flaky tests found, not retried | A flaky test is a bug | .NET pack `dotnet-flaky` (weekly, five runs, two systems) | Enforced (opt-in) |
+| A daily run of the full suite on `main`, with the defaults and with every in-progress flag on | `main` stays releasable, and a flag's on path is tested before its switch-on (MN1) | `template/.github/workflows/daily.yml` and `daily.py`: the checks `daily (defaults)` and `daily (flags-on)`; each pack's `daily` suite, `flag_variable` and setup steps (`pack.toml`); `template/docs/flags.md` | Reported (opt-in) |
 | Golden files change only on purpose | Silent regeneration hides regressions | conventions *Tests* | Guided |
 
 ### 6. Merge and release
@@ -192,8 +196,8 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 | The lead reads reports, not diffs | The lead's context is the costliest | `dispatch` *Lead's routine*; `agent-rules.md` *Report* | Guided |
 | A cause on every must-fix | Rework measured by cause, by script | `reviewer` *The verdict*; conventions *Code quality bar* | Guided |
 | Escaped defects traced to their PR, with the guard that should have caught them | Change failure rate; which guard to change | the facts block's `escaped-from` and `should-have-caught` (conventions *How we work*); `fixer`; `reviewer` check 9 | Guided |
-| Scorecard: cost, flow, quality and people per wave | Throughput alone inflates with AI | [`docs/measuring.md`](docs/measuring.md) (the metrics and collectors); the conventions above; the owner's `scorecard` skill and `scripts/scorecard.py`: the summary (DORA's five keys, the daily run, cost, the owner's load) per wave; its other sections are planned | Trial (summary); Planned (the rest) |
-| The agent team measured by role and model: activity, cost, quality | Choosing each role's model and instructions on evidence | [`docs/measuring.md`](docs/measuring.md#the-agent-team); the owner's `team-report` skill and `scripts/agent_report.py` (activity and cost: AG1, AG5, AG7; AG2, AG4, AG8 in part), on demand; quality by role comes with the scorecard | Trial (activity, cost); Planned (quality) |
+| Scorecard: cost, flow, quality and people per wave | Throughput alone inflates with AI | [`docs/measuring.md`](docs/measuring.md) (the metrics and collectors); the conventions above; the owner's `scorecard` skill and `scripts/scorecard.py`: the summary (DORA's five keys, the daily run, cost, the owner's load) per wave; the rest of the [core metrics](docs/measuring.md#the-core-metrics) planned, every other metric a candidate built on demand | Trial (summary); Planned (the rest of the core) |
+| The agent team measured by role and model: activity, cost, quality | Choosing each role's model and instructions on evidence | [`docs/measuring.md`](docs/measuring.md#the-agent-team); the owner's `team-report` skill and `scripts/agent_report.py` (activity and cost: AG1, AG5, AG7; AG2, AG4, AG8 in part), on demand; quality by role comes with the scorecard | Trial (activity, cost; opt-in); Planned (quality) |
 
 ### 8. Products that run a model
 
@@ -204,9 +208,11 @@ Each practice, the industry source or reason behind it, the parts of the kit tha
 
 ## Planned
 
-- **The scorecard's other sections:** the slices [`docs/measuring.md`](docs/measuring.md#building-it) lists after
-  the summary (practices and trends, escapes and audit, review and build, specs and plans, the agent team's quality,
-  settings and thresholds), and the collectors it lists as new.
+- **The rest of the scorecard's core:** rounds and must-fixes by cause, escapes by guard, the audit's recall, and
+  each core metric's trend ([`docs/measuring.md`](docs/measuring.md#the-core-metrics)). The other slices it lists are
+  candidates, built only when a decision after a real wave needs them.
+- **Scaffolding the core alone:** `new-project` copies only the core, and adds each opt-in on request, as it adds a
+  pack ([`docs/sdlc.md`](docs/sdlc.md#core-and-opt-ins)).
 - **A `sync` skill** that shows how a project's copied template files differ from the kit's current version.
 - **More packs:** Go and Ruby (from Officina's implementations), with their mutation tools.
 - **Releases:** semantic versions, API compatibility checks, SBOM and provenance, per pack.
